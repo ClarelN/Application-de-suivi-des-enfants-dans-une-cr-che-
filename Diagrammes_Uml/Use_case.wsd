@@ -1,0 +1,53 @@
+@startuml
+left to right direction
+skinparam packageStyle rectangle
+
+actor "Éducateur" as Ed
+actor "Parent" as Par
+actor "Administrateur" as Admin
+
+rectangle "Système PépinièreConnect" {
+    
+    (S'authentifier) as Auth
+    
+    package "Suivi Quotidien" {
+        (Gérer les présences) as Pres
+        (Enregistrer Repas/Sieste) as Log
+        (Publier Photos/Journal) as Photo
+    }
+    
+    package "Communication" {
+        (Consulter la Timeline) as Timeline
+        (Envoyer/Recevoir Messages) as Msg
+        (Recevoir Notifications) as Notif
+    }
+    
+    package "Administration" {
+        (Gérer les comptes et classes) as Gestion
+        (Éditer Menu Cantine) as Menu
+    }
+
+    ' Relations Éducateur
+    Ed --> Auth
+    Ed --> Pres
+    Ed --> Log
+    Ed --> Photo
+    Ed --> Msg
+    
+    ' Relations Parent
+    Par --> Auth
+    Par --> Timeline
+    Par --> Msg
+    Par --> Notif
+    
+    ' Relations Admin
+    Admin --> Auth
+    Admin --> Gestion
+    Admin --> Menu
+
+    ' Inclusions
+    Pres ..> Auth : <<include>>
+    Log ..> Auth : <<include>>
+    Timeline ..> Auth : <<include>>
+}
+@enduml
