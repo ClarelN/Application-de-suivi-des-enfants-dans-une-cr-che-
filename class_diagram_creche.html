@@ -1,0 +1,199 @@
+
+<div id="erd"></div>
+<script type="module">
+import mermaid from 'https://esm.sh/mermaid@11/dist/mermaid.esm.min.mjs';
+const dark = matchMedia('(prefers-color-scheme: dark)').matches;
+await document.fonts.ready;
+mermaid.initialize({
+  startOnLoad: false,
+  theme: 'base',
+  fontFamily: '"Anthropic Sans", sans-serif',
+  themeVariables: {
+    darkMode: dark,
+    fontSize: '12px',
+    fontFamily: '"Anthropic Sans", sans-serif',
+    lineColor: dark ? '#9c9a92' : '#73726c',
+    textColor: dark ? '#c2c0b6' : '#3d3d3a',
+    primaryColor: dark ? '#3C3489' : '#EEEDFE',
+    primaryBorderColor: dark ? '#534AB7' : '#AFA9EC',
+    primaryTextColor: dark ? '#CECBF6' : '#26215C',
+    secondaryColor: dark ? '#085041' : '#E1F5EE',
+    secondaryBorderColor: dark ? '#1D9E75' : '#5DCAA5',
+    secondaryTextColor: dark ? '#9FE1CB' : '#04342C',
+    tertiaryColor: dark ? '#444441' : '#F1EFE8',
+    tertiaryBorderColor: dark ? '#888780' : '#B4B2A9',
+    tertiaryTextColor: dark ? '#D3D1C7' : '#2C2C2A',
+  },
+});
+
+const diagram = `classDiagram
+  class Utilisateur {
+    +Long id
+    +String nom
+    +String prenom
+    +String email
+    +String password_hash
+    +RoleEnum role
+    +Boolean actif
+    +DateTime created_at
+    +seConnecter()
+    +seDeconnecter()
+    +reinitialiserMdp()
+  }
+
+  class Administrateur {
+    +creerCompte()
+    +gererTarifs()
+    +genererRapport()
+    +enregistrerPaiement()
+    +publierAnnonce()
+  }
+
+  class Educateur {
+    +pointerArrivee()
+    +pointerDepart()
+    +saisirSuiviJournalier()
+    +signalerIncident()
+    +uploaderPhoto()
+  }
+
+  class Parent {
+    +consulterSuivi()
+    +signalerAbsence()
+    +envoyerMessage()
+    +telechargerFacture()
+  }
+
+  class Enfant {
+    +Long id
+    +String nom
+    +String prenom
+    +Date date_naissance
+    +SexeEnum sexe
+    +String photo_chemin
+    +String allergie
+    +String obs_medicale
+    +StatutEnum statut
+    +calculerGroupe()
+    +archiver()
+  }
+
+  class Groupe {
+    +Long id
+    +String nom
+    +Integer age_min_mois
+    +Integer age_max_mois
+    +Integer capacite_max
+    +String couleur
+    +getTauxOccupation()
+  }
+
+  class Presence {
+    +Long id
+    +Date date
+    +Time heure_arrivee
+    +Time heure_depart
+    +StatutEnum statut
+    +String motif
+    +String recup_par
+    +calculerDuree()
+  }
+
+  class SuiviJournalier {
+    +Long id
+    +Date date
+    +RepasEnum repas
+    +Time sieste_debut
+    +Time sieste_fin
+    +Integer humeur
+    +String note
+    +calculerDureeSieste()
+  }
+
+  class Incident {
+    +Long id
+    +Date date
+    +String type
+    +String description
+    +GraviteEnum gravite
+    +Boolean traite
+    +notifierAdmin()
+  }
+
+  class Facture {
+    +Long id
+    +Integer mois
+    +Integer annee
+    +Decimal montant_du
+    +StatutEnum statut
+    +String pdf_chemin
+    +genererPDF()
+    +envoyerParEmail()
+  }
+
+  class Paiement {
+    +Long id
+    +Decimal montant
+    +ModeEnum mode
+    +Date date_paiement
+    +String note
+    +genererRecu()
+    +calculerSolde()
+  }
+
+  class Message {
+    +Long id
+    +String sujet
+    +String corps
+    +Boolean lu
+    +DateTime created_at
+    +marquerLu()
+  }
+
+  class Annonce {
+    +Long id
+    +String titre
+    +String corps
+    +CibleEnum cible
+    +DateTime expire_le
+    +publier()
+  }
+
+  class Tarif {
+    +Long id
+    +Decimal montant_mensuel
+    +Decimal frais_inscription
+    +Date date_effet
+    +Boolean actif
+  }
+
+  class PersonneAutorisee {
+    +Long id
+    +String nom
+    +String prenom
+    +String lien_parente
+    +String telephone
+  }
+
+  Utilisateur <|-- Administrateur
+  Utilisateur <|-- Educateur
+  Utilisateur <|-- Parent
+
+  Parent "1" --> "1..*" Enfant : est responsable de
+  Enfant "1..*" --> "1" Groupe : appartient à
+  Groupe "1" --> "1..*" Tarif : applique
+  Enfant "1" --> "0..*" Presence : génère
+  Enfant "1" --> "0..*" SuiviJournalier : possède
+  Enfant "1" --> "0..*" Incident : subit
+  Enfant "1" --> "0..*" Facture : reçoit
+  Enfant "1" --> "0..*" PersonneAutorisee : autorise
+  Facture "1" --> "0..*" Paiement : est réglée par
+  Educateur "1" --> "0..*" Presence : enregistre
+  Educateur "1" --> "0..*" SuiviJournalier : saisit
+  Utilisateur "1" --> "0..*" Message : envoie
+  Administrateur "1" --> "0..*" Annonce : publie
+`;
+
+const { svg } = await mermaid.render('erd-svg', diagram);
+document.getElementById('erd').innerHTML = svg;
+</script>
