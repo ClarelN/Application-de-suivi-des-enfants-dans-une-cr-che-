@@ -5,11 +5,27 @@ use App\Http\Controllers\ProfilController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
-Route::post('/login', [AuthController::class, 'login']);
+// Routes publiques (authentification)
+Route::post('/login', [AuthController::class, 'login'])->name('api.login');
 
+// Routes protégées par authentification Sanctum
 Route::middleware('auth:sanctum')->group(function () {
-    Route::post('/logout', [AuthController::class, 'logout']);
-    Route::get('/profil', [ProfilController::class, 'show']);
-    Route::put('/profil', [ProfilController::class, 'update']);
-    Route::put('/profil/password', [ProfilController::class, 'updatePassword']);
+    // Authentification
+    Route::post('/logout', [AuthController::class, 'logout'])->name('api.logout');
+
+    // Profil utilisateur
+    Route::prefix('profile')->group(function () {
+        Route::get('/', [ProfilController::class, 'show'])->name('api.profile.show');
+        Route::put('/', [ProfilController::class, 'update'])->name('api.profile.update');
+        Route::put('/password', [ProfilController::class, 'updatePassword'])->name('api.profile.password');
+    });
+
+    // Endpoints API à configurer (structure pour futurs développements)
+    // Route::apiResource('enfants', ...);
+    // Route::apiResource('groupes', ...);
+    // Route::apiResource('activites', ...);
+    // Route::apiResource('presences', ...);
+    // Route::apiResource('educateurs', ...);
+    // Route::apiResource('parents', ...);
+    // Route::apiResource('administrateurs', ...);
 });
