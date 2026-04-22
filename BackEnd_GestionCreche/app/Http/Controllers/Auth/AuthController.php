@@ -2,13 +2,14 @@
 
 namespace App\Http\Controllers\Auth;
 
-use Illuminate\Http\Request;
+use App\Http\Controllers\Controller;
 use App\Models\Utilisateur;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 
-class AuthController
+class AuthController extends Controller
 {
-     // POST /api/login
+    // POST /api/login
     public function login(Request $request)
     {
         $request->validate([
@@ -26,13 +27,16 @@ class AuthController
             ], 401);
         }
 
+        // Supprimer les anciens tokens
+        $utilisateur->tokens()->delete();
+
         $token = $utilisateur->createToken('auth_token')->plainTextToken;
 
         return response()->json([
-            'message'      => 'Connexion réussie.',
-            'token'        => $token,
-            'token_type'   => 'Bearer',
-            'utilisateur'  => [
+            'message'     => 'Connexion réussie.',
+            'token'       => $token,
+            'token_type'  => 'Bearer',
+            'utilisateur' => [
                 'id'     => $utilisateur->id,
                 'nom'    => $utilisateur->nom,
                 'prenom' => $utilisateur->prenom,

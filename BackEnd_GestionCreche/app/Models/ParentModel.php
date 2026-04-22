@@ -2,11 +2,10 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
-
-class ParentModel extends Model
+class ParentModel extends Utilisateur
 {
     protected $table = 'utilisateurs';
+
     protected static function booted(): void
     {
         static::addGlobalScope('role', fn($q) => $q->where('role', 'parent'));
