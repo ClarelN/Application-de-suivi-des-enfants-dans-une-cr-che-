@@ -1,11 +1,10 @@
 <?php
-// database/factories/AnnonceFactory.php
 
 namespace Database\Factories;
 
 use App\Models\Annonce;
+use App\Models\Utilisateur;
 use Illuminate\Database\Eloquent\Factories\Factory;
-use Illuminate\Support\Facades\DB;
 
 class AnnonceFactory extends Factory
 {
@@ -13,14 +12,11 @@ class AnnonceFactory extends Factory
 
     public function definition(): array
     {
-        // Récupérer un utilisateur au hasard
-        $userId = DB::table('utilisateurs')->inRandomOrder()->first()?->id ?? 1;
-
         return [
-            'user_id' => $userId,
-            'titre' => fake()->sentence(),
-            'corps' => fake()->paragraph(4),
-            'cible' => fake()->randomElement(['tous', 'parents', 'educateurs']),
+            'user_id'   => Utilisateur::factory(),
+            'titre'     => fake()->sentence(),
+            'corps'     => fake()->paragraph(4),
+            'cible'     => fake()->randomElement(['tous', 'parents', 'educateurs']),
             'expire_le' => fake()->optional(0.7)->dateTimeBetween('+1 days', '+90 days'),
         ];
     }

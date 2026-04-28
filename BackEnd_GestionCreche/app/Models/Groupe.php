@@ -2,12 +2,13 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Groupe extends Model
 {
-    use SoftDeletes;
+    use HasFactory, SoftDeletes;
 
     protected $fillable = [
         'nom',
@@ -17,25 +18,21 @@ class Groupe extends Model
         'couleur',
     ];
 
-    // Un groupe a plusieurs enfants
     public function enfants()
     {
         return $this->hasMany(Enfant::class);
     }
 
-    // Un groupe a plusieurs éducateurs (pivot)
     public function educateurs()
     {
-        return $this->belongsToMany(User::class, 'educateur_groupe', 'groupe_id', 'user_id');
+        return $this->belongsToMany(Utilisateur::class, 'educateur_groupe', 'groupe_id', 'educateur_id');
     }
 
-    // Un groupe a plusieurs tarifs
     public function tarifs()
     {
         return $this->hasMany(Tarif::class);
     }
 
-    // Taux d'occupation du groupe
     public function getTauxOccupation(): float
     {
         if ($this->capacite_max === 0) return 0;

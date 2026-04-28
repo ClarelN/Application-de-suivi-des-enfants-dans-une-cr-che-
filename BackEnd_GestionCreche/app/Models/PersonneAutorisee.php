@@ -2,10 +2,15 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class PersonneAutorisee extends Model
 {
+    use HasFactory;
+
+    protected $table = 'personnes_autorisees';
+
     protected $fillable = [
         'enfant_id',
         'nom',

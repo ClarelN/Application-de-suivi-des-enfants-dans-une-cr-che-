@@ -19,11 +19,16 @@ class Educateur extends Utilisateur
 
     public function presences()
     {
-        return $this->hasMany(Presence::class, 'educateur_id');
+        return $this->hasMany(Attendance::class, 'educateur_id');
     }
 
     public function suivisJournaliers()
     {
         return $this->hasMany(SuiviJournalier::class, 'educateur_id');
+    }
+
+    public function incidents()
+    {
+        return $this->hasMany(Incident::class, 'educateur_id');
     }
 }

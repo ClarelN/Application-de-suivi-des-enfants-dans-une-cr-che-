@@ -10,8 +10,8 @@ return new class extends Migration
     {
         Schema::create('messages', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('expediteur_id')->constrained('users')->cascadeOnDelete();
-            $table->foreignId('destinataire_id')->constrained('users')->cascadeOnDelete();
+            $table->foreignId('expediteur_id')->constrained('utilisateurs')->cascadeOnDelete();
+            $table->foreignId('destinataire_id')->constrained('utilisateurs')->cascadeOnDelete();
             $table->string('sujet');
             $table->text('corps');
             $table->boolean('lu')->default(false);

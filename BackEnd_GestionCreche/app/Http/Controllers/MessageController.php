@@ -3,7 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Message;
-use App\Models\User;
+use App\Models\Utilisateur;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -22,7 +22,7 @@ class MessageController extends Controller
 
     public function create()
     {
-        $users = User::where('id', '!=', Auth::id())->get();
+        $users = Utilisateur::where('id', '!=', Auth::id())->get();
         return view('messages.create', compact('users'));
     }
 
@@ -30,7 +30,7 @@ class MessageController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'destinataire_id' => 'required|exists:users,id',
+            'destinataire_id' => 'required|exists:utilisateurs,id',
             'sujet'           => 'required|string|max:255',
             'corps'           => 'required|string',
         ]);

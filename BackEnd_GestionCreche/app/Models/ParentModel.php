@@ -15,11 +15,12 @@ class ParentModel extends Utilisateur
     public function enfants()
     {
         return $this->belongsToMany(Enfant::class, 'enfant_parent', 'parent_id', 'enfant_id')
-                    ->withPivot('lien_parente', 'responsable_principal');
+                    ->withPivot('lien_parente', 'responsable_principal')
+                    ->withTimestamps();
     }
 
     public function factures()
     {
-        return $this->hasMany(Facture::class, 'parent_id');
+        return $this->hasManyThrough(Facture::class, Enfant::class, 'id', 'enfant_id', 'id', 'id');
     }
 }
