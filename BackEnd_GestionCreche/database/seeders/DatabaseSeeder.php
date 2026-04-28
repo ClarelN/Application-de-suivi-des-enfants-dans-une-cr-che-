@@ -10,12 +10,8 @@ class DatabaseSeeder extends Seeder
 {
     use WithoutModelEvents;
 
-    /**
-     * Seed the application's database.
-     */
     public function run(): void
     {
-        // Désactiver les vérifications de clés étrangères pour le seeding
         DB::statement('SET FOREIGN_KEY_CHECKS=0;');
 
         $this->call([
@@ -28,9 +24,10 @@ class DatabaseSeeder extends Seeder
             MessageSeeder::class,
             EvenementSeeder::class,
             AnnonceSeeder::class,
+            RepasSeeder::class,
+            StockLogistiqueSeeder::class,
         ]);
 
-        // Réactiver les vérifications de clés étrangères
         DB::statement('SET FOREIGN_KEY_CHECKS=1;');
     }
 }

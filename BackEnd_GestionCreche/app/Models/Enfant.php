@@ -2,12 +2,13 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Enfant extends Model
 {
-    use SoftDeletes;
+    use HasFactory, SoftDeletes;
 
     protected $fillable = [
         'nom',
@@ -25,45 +26,52 @@ class Enfant extends Model
         'date_naissance' => 'date',
     ];
 
-    // Un enfant appartient à un groupe
     public function groupe()
     {
         return $this->belongsTo(Groupe::class);
     }
 
-    // Un enfant a plusieurs parents (pivot)
     public function parents()
     {
-        return $this->belongsToMany(User::class, 'enfant_parent', 'enfant_id', 'user_id');
+        return $this->belongsToMany(Utilisateur::class, 'enfant_parent', 'enfant_id', 'parent_id')
+                    ->withPivot('lien_parente', 'responsable_principal')
+                    ->withTimestamps();
     }
 
-    // Un enfant a plusieurs personnes autorisées
     public function personnesAutorisees()
     {
         return $this->hasMany(PersonneAutorisee::class);
     }
 
-    // Un enfant a plusieurs présences
     public function presences()
     {
-        return $this->hasMany(Presence::class);
+        return $this->hasMany(Attendance::class);
     }
 
-    // Un enfant a plusieurs suivis journaliers
-    public function suivisJournaliers()
+    public function repas()
     {
-        return $this->hasMany(SuiviJournalier::class);
+        return $this->belongsToMany(Repas::class, 'consommation_repas', 'enfant_id', 'repas_id')
+                    ->withPivot('quantite_mangee', 'commentaires')
+                    ->withTimestamps();
     }
 
-    // Un enfant a plusieurs incidents
+    public function activites()
+    {
+        return $this->belongsToMany(Activity::class, 'activity_enfant', 'enfant_id', 'activity_id');
+    }
+
+    public function factures()
+    {
+        return $this->hasMany(Facture::class);
+    }
+
     public function incidents()
     {
         return $this->hasMany(Incident::class);
     }
 
-    // Un enfant a plusieurs factures
-    public function factures()
+    public function suivisJournaliers()
     {
-        return $this->hasMany(Facture::class);
+        return $this->hasMany(SuiviJournalier::class);
     }
 }

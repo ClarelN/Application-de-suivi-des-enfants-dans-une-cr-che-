@@ -18,7 +18,7 @@ class GroupeResource extends JsonResource
             'couleur'         => $this->couleur,
             'taux_occupation' => $this->getTauxOccupation(),
             'nb_enfants'      => $this->whenCounted('enfants'),
-            'created_at'      => $this->created_at->format('d/m/Y'),
+            'created_at'      => $this->created_at?->format('d/m/Y'),
         ];
     }
 }

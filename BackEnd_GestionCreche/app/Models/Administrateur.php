@@ -14,6 +14,6 @@ class Administrateur extends Utilisateur
 
     public function annonces()
     {
-        return $this->hasMany(Annonce::class, 'administrateur_id');
+        return $this->hasMany(Annonce::class, 'user_id');
     }
 }

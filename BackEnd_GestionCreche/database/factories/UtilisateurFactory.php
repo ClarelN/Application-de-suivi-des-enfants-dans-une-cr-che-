@@ -17,7 +17,7 @@ class UtilisateurFactory extends Factory
             'nom' => fake()->lastName(),
             'prenom' => fake()->firstName(),
             'email' => fake()->unique()->safeEmail(),
-            'mot_de_passe' => Hash::make('password'),
+            'password' => Hash::make('password'),
             'role' => 'parent',
             'actif' => true,
         ];

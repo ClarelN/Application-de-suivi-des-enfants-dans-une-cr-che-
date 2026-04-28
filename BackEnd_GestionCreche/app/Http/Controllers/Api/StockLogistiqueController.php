@@ -3,27 +3,24 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Resources\StockLogistiqueResource;
 use App\Models\StockLogistique;
 use Illuminate\Http\Request;
 
 class StockLogistiqueController extends Controller
 {
-    // GET /api/stocks
     public function index()
     {
         $stocks = StockLogistique::orderBy('produit')->get();
 
-        // Séparer les produits en alerte
-        $enAlerte = $stocks->filter(fn($s) => $s->estEnAlerte());
-
         return response()->json([
-            'success'   => true,
-            'data'      => $stocks,
-            'en_alerte' => $enAlerte->values(),
+            'data'      => StockLogistiqueResource::collection($stocks),
+            'en_alerte' => StockLogistiqueResource::collection(
+                $stocks->filter(fn($s) => $s->estEnAlerte())->values()
+            ),
         ]);
     }
 
-    // POST /api/stocks
     public function store(Request $request)
     {
         $request->validate([
@@ -35,24 +32,16 @@ class StockLogistiqueController extends Controller
 
         $stock = StockLogistique::create($request->all());
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Produit ajouté au stock.',
-            'data'    => $stock,
-        ], 201);
+        return (new StockLogistiqueResource($stock))
+            ->additional(['message' => 'Produit ajouté au stock.'])
+            ->response()->setStatusCode(201);
     }
 
-    // GET /api/stocks/{id}
     public function show(StockLogistique $stockLogistique)
     {
-        return response()->json([
-            'success'   => true,
-            'data'      => $stockLogistique,
-            'en_alerte' => $stockLogistique->estEnAlerte(),
-        ]);
+        return new StockLogistiqueResource($stockLogistique);
     }
 
-    // PUT /api/stocks/{id}
     public function update(Request $request, StockLogistique $stockLogistique)
     {
         $request->validate([
@@ -64,21 +53,13 @@ class StockLogistiqueController extends Controller
 
         $stockLogistique->update($request->all());
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Stock mis à jour.',
-            'data'    => $stockLogistique,
-        ]);
+        return new StockLogistiqueResource($stockLogistique);
     }
 
-    // DELETE /api/stocks/{id}
     public function destroy(StockLogistique $stockLogistique)
     {
         $stockLogistique->delete();
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Produit supprimé du stock.',
-        ]);
+        return response()->json(['message' => 'Produit supprimé du stock.']);
     }
 }

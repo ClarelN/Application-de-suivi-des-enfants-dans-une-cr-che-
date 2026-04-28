@@ -2,43 +2,72 @@
 
 use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\ProfilController;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\EnfantApiController;
 use App\Http\Controllers\Api\GroupeApiController;
+use App\Http\Controllers\Api\AttendanceApiController;
+use App\Http\Controllers\Api\ActivityApiController;
+use App\Http\Controllers\Api\MessageApiController;
+use App\Http\Controllers\Api\AnnonceApiController;
+use App\Http\Controllers\Api\RepasController;
+use App\Http\Controllers\Api\ConsommationRepasController;
+use App\Http\Controllers\Api\StockLogistiqueController;
+use Illuminate\Support\Facades\Route;
 
-// Routes publiques (authentification)
+// ─── Public ──────────────────────────────────────────────────────────────────
 Route::post('/login', [AuthController::class, 'login'])->name('api.login');
 
-// Routes API pour les ressources principales
-Route::apiResource('enfants', EnfantApiController::class);
-Route::apiResource('groupes', GroupeApiController::class);
-
-// Routes protégées par authentification Sanctum
+// ─── Protégé (Sanctum) ───────────────────────────────────────────────────────
 Route::middleware('auth:sanctum')->group(function () {
+
     // Authentification
     Route::post('/logout', [AuthController::class, 'logout'])->name('api.logout');
 
     // Profil utilisateur
-    Route::prefix('profile')->group(function () {
-        Route::get('/', [ProfilController::class, 'show'])->name('api.profile.show');
-        Route::put('/', [ProfilController::class, 'update'])->name('api.profile.update');
-        Route::put('/password', [ProfilController::class, 'updatePassword'])->name('api.profile.password');
+    Route::prefix('profile')->name('api.profile.')->group(function () {
+        Route::get('/',         [ProfilController::class, 'show'])->name('show');
+        Route::put('/',         [ProfilController::class, 'update'])->name('update');
+        Route::put('/password', [ProfilController::class, 'updatePassword'])->name('password');
     });
 
-    // Enfants d'un groupe spécifique
-Route::get('groupes/{groupe}/enfants', function (\App\Models\Groupe $groupe) {
-    return \App\Http\Resources\EnfantResource::collection(
-        $groupe->enfants()->with('personnesAutorisees')->get()
-    );
-})->name('api.groupes.enfants');
+    // ── Noyau : Enfants & Groupes ─────────────────────────────────────────────
+    Route::apiResource('enfants', EnfantApiController::class);
+    Route::apiResource('groupes', GroupeApiController::class);
+    Route::get('groupes/{groupe}/enfants', function (\App\Models\Groupe $groupe) {
+        return \App\Http\Resources\EnfantResource::collection(
+            $groupe->enfants()->with('personnesAutorisees')->get()
+        );
+    })->name('api.groupes.enfants');
 
-    // Endpoints API à configurer (structure pour futurs développements)
-    // Route::apiResource('enfants', ...);
-    // Route::apiResource('groupes', ...);
-    // Route::apiResource('activites', ...);
-    // Route::apiResource('presences', ...);
-    // Route::apiResource('educateurs', ...);
-    // Route::apiResource('parents', ...);
-    // Route::apiResource('administrateurs', ...);
+    // ── Suivi : Présences ─────────────────────────────────────────────────────
+    Route::get('presences/rapport-journalier', [AttendanceApiController::class, 'dailyReport'])
+        ->name('api.presences.rapport');
+    Route::apiResource('presences', AttendanceApiController::class);
+
+    // ── Suivi : Activités journalières ────────────────────────────────────────
+    Route::apiResource('activites', ActivityApiController::class)
+        ->parameters(['activites' => 'activity']);
+
+    // ── Communication : Messages ──────────────────────────────────────────────
+    Route::apiResource('messages', MessageApiController::class)->only([
+        'index', 'store', 'show', 'destroy',
+    ]);
+
+    // ── Communication : Annonces ──────────────────────────────────────────────
+    Route::apiResource('annonces', AnnonceApiController::class)->except([
+        'create', 'edit',
+    ]);
+
+    // ── Logistique : Repas & Consommations ────────────────────────────────────
+    Route::apiResource('repas', RepasController::class)
+        ->parameters(['repas' => 'repas']);
+    Route::prefix('repas/{repas}/consommations')->name('api.repas.consommations.')->group(function () {
+        Route::get('/',          [ConsommationRepasController::class, 'index'])->name('index');
+        Route::post('/',         [ConsommationRepasController::class, 'store'])->name('store');
+        Route::post('/groupe',   [ConsommationRepasController::class, 'storeGroupe'])->name('groupe');
+        Route::delete('/{enfant}', [ConsommationRepasController::class, 'destroy'])->name('destroy');
+    });
+
+    // ── Logistique : Stocks ───────────────────────────────────────────────────
+    Route::apiResource('stocks', StockLogistiqueController::class)
+        ->parameters(['stocks' => 'stockLogistique']);
 });

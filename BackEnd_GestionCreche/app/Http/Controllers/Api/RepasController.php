@@ -3,26 +3,21 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Resources\RepasResource;
 use App\Models\Repas;
 use Illuminate\Http\Request;
 
 class RepasController extends Controller
 {
-    // GET /api/repas
     public function index()
     {
-        $repas = Repas::with('enfants')
-            ->orderBy('date', 'desc')
+        $repas = Repas::orderBy('date', 'desc')
             ->orderBy('heure', 'desc')
             ->paginate(10);
 
-        return response()->json([
-            'success' => true,
-            'data'    => $repas,
-        ]);
+        return RepasResource::collection($repas);
     }
 
-    // POST /api/repas
     public function store(Request $request)
     {
         $request->validate([
@@ -34,25 +29,16 @@ class RepasController extends Controller
 
         $repas = Repas::create($request->all());
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Repas créé avec succès.',
-            'data'    => $repas,
-        ], 201);
+        return (new RepasResource($repas))
+            ->additional(['message' => 'Repas créé avec succès.'])
+            ->response()->setStatusCode(201);
     }
 
-    // GET /api/repas/{id}
     public function show(Repas $repas)
     {
-        $repas->load('enfants');
-
-        return response()->json([
-            'success' => true,
-            'data'    => $repas,
-        ]);
+        return new RepasResource($repas->load('enfants'));
     }
 
-    // PUT /api/repas/{id}
     public function update(Request $request, Repas $repas)
     {
         $request->validate([
@@ -64,21 +50,13 @@ class RepasController extends Controller
 
         $repas->update($request->all());
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Repas modifié avec succès.',
-            'data'    => $repas,
-        ]);
+        return new RepasResource($repas);
     }
 
-    // DELETE /api/repas/{id}
     public function destroy(Repas $repas)
     {
         $repas->delete();
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Repas supprimé avec succès.',
-        ]);
+        return response()->json(['message' => 'Repas supprimé avec succès.']);
     }
 }

@@ -25,7 +25,7 @@ class UtilisateurSeeder extends Seeder
                 'nom' => 'Admin',
                 'prenom' => 'Crèche',
                 'email' => 'admin@creche.cm',
-                'mot_de_passe' => Hash::make('password'),
+                'password' => Hash::make('password'),
                 'role' => 'administrateur',
                 'actif' => true,
             ]
