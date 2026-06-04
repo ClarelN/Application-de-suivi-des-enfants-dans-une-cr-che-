@@ -1,15 +1,32 @@
 <?php
 
 return [
-    'paths' => ['api/*'],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Chemins protégés par CORS
+    |--------------------------------------------------------------------------
+    | 'api/*' couvre toutes les routes API ainsi que les preflight OPTIONS.
+    | 'sanctum/csrf-cookie' est utile si vous passez un jour en mode SPA/cookie.
+    */
+    'paths' => ['api/*', 'sanctum/csrf-cookie'],
 
     'allowed_methods' => ['*'],
 
     /*
-    | En développement : FRONTEND_URL=* dans .env
-    | En production    : FRONTEND_URL=https://votre-domaine.com
+    |--------------------------------------------------------------------------
+    | Origines autorisées
+    |--------------------------------------------------------------------------
+    | Vite tourne sur 5173 par défaut. En prod, remplacez par votre domaine.
+    | La variable FRONTEND_URL dans .env prend le dessus.
     */
-    'allowed_origins' => [env('FRONTEND_URL', 'http://localhost:3000')],
+    'allowed_origins' => [
+        env('FRONTEND_URL', 'http://localhost:5173'),
+        'http://localhost:5173',
+        'http://127.0.0.1:5173',
+        'http://localhost:3000',
+        'http://127.0.0.1:3000',
+    ],
 
     'allowed_origins_patterns' => [],
 
@@ -20,8 +37,12 @@ return [
     'max_age' => 86400,
 
     /*
-    | Garder à false si l'auth se fait par Bearer token (header Authorization).
-    | Passer à true uniquement si vous utilisez Sanctum en mode cookie/SPA.
+    |--------------------------------------------------------------------------
+    | Credentials
+    |--------------------------------------------------------------------------
+    | Garder à false : l'auth est par Bearer token (header Authorization).
+    | Ne passer à true que pour le mode cookie/SPA Sanctum.
     */
     'supports_credentials' => false,
+
 ];

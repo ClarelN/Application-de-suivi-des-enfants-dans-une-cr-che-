@@ -15,6 +15,14 @@ class Message extends Model
         'sujet',
         'corps',
         'lu',
+        'fichier_chemin',
+        'fichier_type',
+        'fichier_nom',
+        'fichier_taille',
+    ];
+
+    protected $casts = [
+        'lu' => 'boolean',
     ];
 
     public function expediteur()

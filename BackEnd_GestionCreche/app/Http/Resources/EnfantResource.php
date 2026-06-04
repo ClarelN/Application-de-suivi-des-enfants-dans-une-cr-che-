@@ -13,7 +13,7 @@ class EnfantResource extends JsonResource
             'id'             => $this->id,
             'nom'            => $this->nom,
             'prenom'         => $this->prenom,
-            'date_naissance' => $this->date_naissance?->format('d/m/Y'),
+            'date_naissance' => $this->date_naissance?->format('Y-m-d'),
             'age_mois'       => $this->date_naissance?->diffInMonths(now()),
             'sexe'           => $this->sexe,
             'photo'          => $this->photo_chemin

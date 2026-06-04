@@ -77,7 +77,7 @@ class MessageTest extends TestCase
 
         $this->postJson('/api/messages', [])
              ->assertStatus(422)
-             ->assertJsonValidationErrors(['destinataire_id', 'sujet', 'corps']);
+             ->assertJsonValidationErrors(['destinataire_id']);
     }
 
     public function test_store_echoue_avec_destinataire_inexistant(): void

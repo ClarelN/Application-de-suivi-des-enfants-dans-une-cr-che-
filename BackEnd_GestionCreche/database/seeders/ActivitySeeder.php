@@ -1,5 +1,4 @@
 <?php
-// database/seeders/ActivitySeeder.php
 
 namespace Database\Seeders;
 
@@ -12,37 +11,20 @@ class ActivitySeeder extends Seeder
 {
     use WithoutModelEvents;
 
-    protected $titles = [
-        'Atelier peinture',
-        'Lecture',
-        'Jeux libres',
-        'Musique',
-        'Motricité fine',
-        'Éveil sensoriel',
-        'Comptines',
-        'Jardinage',
-    ];
-
-    /**
-     * Run the database seeds.
-     */
     public function run(): void
     {
-        $groupes = Groupe::all();
+        $activites = [
+            ['titre' => 'Éveil sensoriel',  'desc' => 'Exploration de textures et matières',   'offset' => 1, 'duree' => 60],
+            ['titre' => 'Atelier peinture', 'desc' => 'Peinture aux doigts sur grande feuille', 'offset' => 3, 'duree' => 45],
+        ];
 
-        foreach ($groupes as $groupe) {
-            // Créer 5 à 10 activités par groupe
-            $count = fake()->numberBetween(5, 10);
-
-            for ($i = 0; $i < $count; $i++) {
-                $startTime = fake()->dateTimeBetween('-30 days', 'now');
-                $endTime = (clone $startTime)->modify('+1 hour');
-
+        foreach (Groupe::all() as $groupe) {
+            foreach ($activites as $a) {
                 Activity::create([
-                    'title' => fake()->randomElement($this->titles),
-                    'description' => fake()->optional(0.6)->sentence(8),
-                    'start_time' => $startTime,
-                    'end_time' => $endTime,
+                    'title'       => $a['titre'],
+                    'description' => $a['desc'],
+                    'start_time'  => now()->subDays($a['offset'])->setTime(10, 0),
+                    'end_time'    => now()->subDays($a['offset'])->setTime(10, 0)->addMinutes($a['duree']),
                 ]);
             }
         }

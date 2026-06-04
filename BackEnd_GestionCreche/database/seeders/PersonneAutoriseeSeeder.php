@@ -1,9 +1,7 @@
 <?php
-// database/seeders/PersonneAutoriseeSeeder.php
 
 namespace Database\Seeders;
 
-use App\Models\PersonneAutorisee;
 use App\Models\Enfant;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
@@ -12,38 +10,36 @@ class PersonneAutoriseeSeeder extends Seeder
 {
     use WithoutModelEvents;
 
-    protected $liens = [
-        'Grand-mère',
-        'Grand-père',
-        'Oncle',
-        'Tante',
-        'Nourrice',
-        'Autre parent',
-        'Tuteur',
+    // Une personne autorisée par enfant
+    protected array $data = [
+        'Emma Amougou'   => ['nom' => 'Amougou', 'prenom' => 'André',     'lien' => 'Grand-père', 'tel' => '06 11 22 33 44'],
+        'Léo Fouda'      => ['nom' => 'Fouda',   'prenom' => 'Hélène',    'lien' => 'Grand-mère', 'tel' => '06 22 33 44 55'],
+        'Camille Nguele' => ['nom' => 'Nguele',  'prenom' => 'Bertrand',  'lien' => 'Oncle',      'tel' => '06 33 44 55 66'],
+        'Noah Tsogo'     => ['nom' => 'Tsogo',   'prenom' => 'Cécile',    'lien' => 'Tante',      'tel' => '06 44 55 66 77'],
+        'Jade Mbarga'    => ['nom' => 'Mbarga',  'prenom' => 'Georges',   'lien' => 'Grand-père', 'tel' => '06 55 66 77 88'],
+        'Hugo Abena'     => ['nom' => 'Abena',   'prenom' => 'Isabelle',  'lien' => 'Grand-mère', 'tel' => '06 66 77 88 99'],
+        'Inès Mengue'    => ['nom' => 'Mengue',  'prenom' => 'François',  'lien' => 'Oncle',      'tel' => '06 77 88 99 00'],
+        'Tom Etoa'       => ['nom' => 'Etoa',    'prenom' => 'Thérèse',   'lien' => 'Grand-mère', 'tel' => '06 88 99 00 11'],
+        'Eva Ngo'        => ['nom' => 'Ngo',     'prenom' => 'Édouard',   'lien' => 'Grand-père', 'tel' => '06 99 00 11 22'],
+        'Liam Owona'     => ['nom' => 'Owona',   'prenom' => 'Marguerite','lien' => 'Nourrice',   'tel' => '06 00 11 22 33'],
+        'Zoé Bekono'     => ['nom' => 'Bekono',  'prenom' => 'Samuel',    'lien' => 'Oncle',      'tel' => '06 11 33 55 77'],
+        'Maxime Tagne'   => ['nom' => 'Tagne',   'prenom' => 'Lucie',     'lien' => 'Tante',      'tel' => '06 22 44 66 88'],
     ];
 
-    /**
-     * Run the database seeds.
-     */
     public function run(): void
     {
-        $enfants = Enfant::all();
+        foreach ($this->data as $enfantFullName => $pa) {
+            [$prenom, $nom] = explode(' ', $enfantFullName, 2);
+            $enfant = Enfant::where('prenom', $prenom)->where('nom', $nom)->first();
+            if (!$enfant) continue;
 
-        foreach ($enfants as $enfant) {
-            // Vérifier si des personnes autorisées existent déjà pour cet enfant
             if ($enfant->personnesAutorisees()->count() === 0) {
-                // Créer 1 ou 2 personnes autorisées
-                $count = fake()->numberBetween(1, 2);
-
-                for ($i = 0; $i < $count; $i++) {
-                    PersonneAutorisee::create([
-                        'enfant_id' => $enfant->id,
-                        'nom' => fake()->lastName(),
-                        'prenom' => fake()->firstName(),
-                        'lien_parente' => fake()->randomElement($this->liens),
-                        'telephone' => fake()->phoneNumber(),
-                    ]);
-                }
+                $enfant->personnesAutorisees()->create([
+                    'nom'          => $pa['nom'],
+                    'prenom'       => $pa['prenom'],
+                    'lien_parente' => $pa['lien'],
+                    'telephone'    => $pa['tel'],
+                ]);
             }
         }
     }
