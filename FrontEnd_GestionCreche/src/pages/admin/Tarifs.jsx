@@ -6,10 +6,10 @@ import api from "../../services/api";
 import toast from "react-hot-toast";
 
 const DEMO = [
-  { id:1, groupe:{ nom:"Les Poussins" }, montant_mensuel:"245.00", frais_inscription:"150.00", date_effet:"2025-01-01", actif:true  },
-  { id:2, groupe:{ nom:"Les Lutins"   }, montant_mensuel:"265.00", frais_inscription:"150.00", date_effet:"2025-01-01", actif:true  },
-  { id:3, groupe:{ nom:"Les Étoiles"  }, montant_mensuel:"285.00", frais_inscription:"150.00", date_effet:"2025-01-01", actif:true  },
-  { id:4, groupe:{ nom:"Les Poussins" }, montant_mensuel:"225.00", frais_inscription:"130.00", date_effet:"2024-01-01", actif:false },
+  { id:1, groupe:{ nom:"Les Poussins" }, montant_mensuel:"40000", frais_inscription:"25000", date_effet:"2025-01-01", actif:true  },
+  { id:2, groupe:{ nom:"Les Lutins"   }, montant_mensuel:"45000", frais_inscription:"25000", date_effet:"2025-01-01", actif:true  },
+  { id:3, groupe:{ nom:"Les Étoiles"  }, montant_mensuel:"50000", frais_inscription:"25000", date_effet:"2025-01-01", actif:true  },
+  { id:4, groupe:{ nom:"Les Poussins" }, montant_mensuel:"35000", frais_inscription:"20000", date_effet:"2024-01-01", actif:false },
 ];
 
 const EMPTY = { groupe_id:"", montant_mensuel:"", frais_inscription:"", date_effet:"", actif:true };
@@ -89,7 +89,8 @@ export default function Tarifs() {
       </div>
 
       <div style={{ background:T.surface, borderRadius:14, border:`1px solid ${T.border}`, overflow:"hidden" }}>
-        <table style={{ width:"100%", borderCollapse:"collapse" }}>
+        <div style={{ overflowX:"auto" }}>
+        <table style={{ width:"100%", borderCollapse:"collapse", minWidth:580 }}>
           <thead>
             <tr style={{ background:T.bg, borderBottom:`2px solid ${T.border}` }}>
               {["Groupe","Mensuel","Frais inscription","Date d'effet","Statut","Actions"].map(h => (
@@ -106,10 +107,10 @@ export default function Tarifs() {
                   </span>
                 </td>
                 <td style={{ padding:"11px 14px", fontSize:14, fontWeight:800, color:T.teal }}>
-                  {parseFloat(t.montant_mensuel).toFixed(2)} €
+                  {Math.round(parseFloat(t.montant_mensuel)).toLocaleString('fr-FR')} FCFA
                 </td>
                 <td style={{ padding:"11px 14px", fontSize:13, color:T.text2 }}>
-                  {parseFloat(t.frais_inscription).toFixed(2)} €
+                  {Math.round(parseFloat(t.frais_inscription)).toLocaleString('fr-FR')} FCFA
                 </td>
                 <td style={{ padding:"11px 14px", fontSize:13, color:T.text2 }}>
                   {new Date(t.date_effet).toLocaleDateString("fr-FR")}
@@ -136,13 +137,13 @@ export default function Tarifs() {
             ))}
           </tbody>
         </table>
+        </div>
       </div>
 
       {/* Modal */}
       {showForm && (
-        <>
-          <div onClick={() => setShowForm(false)} style={{ position:"fixed", inset:0, zIndex:40, background:"rgba(0,0,0,0.45)", backdropFilter:"blur(4px)" }}/>
-          <div style={{ position:"fixed", top:"50%", left:"50%", transform:"translate(-50%,-50%)", zIndex:50, width:"100%", maxWidth:460, background:T.surface, borderRadius:20, padding:28, margin:16, boxSizing:"border-box", boxShadow:"0 24px 80px rgba(0,0,0,0.2)" }}>
+        <div onClick={() => setShowForm(false)} style={{ position:"fixed", inset:0, zIndex:40, background:"rgba(0,0,0,0.45)", backdropFilter:"blur(4px)", display:"flex", alignItems:"center", justifyContent:"center" }}>
+          <div onClick={e => e.stopPropagation()} style={{ position:"relative", zIndex:50, width:"100%", maxWidth:460, background:T.surface, borderRadius:20, padding:28, margin:16, boxSizing:"border-box", boxShadow:"0 24px 80px rgba(0,0,0,0.2)" }}>
             <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:20 }}>
               <div style={{ fontSize:17, fontWeight:800, fontFamily:"Nunito,sans-serif" }}>
                 {editing ? "Modifier le tarif" : "Nouveau tarif"}
@@ -152,7 +153,7 @@ export default function Tarifs() {
               </button>
             </div>
             <form onSubmit={handleSubmit}>
-              {[["Groupe","groupe_id","select"],["Montant mensuel (€) *","montant_mensuel","number"],["Frais d'inscription (€) *","frais_inscription","number"],["Date d'effet *","date_effet","date"]].map(([label, key, type]) => (
+              {[["Groupe","groupe_id","select"],["Montant mensuel (FCFA) *","montant_mensuel","number"],["Frais d'inscription (FCFA) *","frais_inscription","number"],["Date d'effet *","date_effet","date"]].map(([label, key, type]) => (
                 <div key={key} style={{ marginBottom:14 }}>
                   <label style={{ fontSize:11, fontWeight:700, color:T.text2, display:"block", marginBottom:5, textTransform:"uppercase", letterSpacing:"0.07em" }}>{label}</label>
                   {type === "select" ? (
@@ -179,7 +180,7 @@ export default function Tarifs() {
               </div>
             </form>
           </div>
-        </>
+        </div>
       )}
     </Shell>
   );

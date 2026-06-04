@@ -6,18 +6,10 @@ import api from "../../services/api";
 import toast from "react-hot-toast";
 import Swal from "sweetalert2";
 
-const DEMO = [
-  { id:1, type:"Réaction allergique", description:"Réaction cutanée suite au repas", gravite:"élevée",  traite:false, date:"2025-04-21", enfant:{ prenom:"Emma",  nom:"Dupont"  } },
-  { id:2, type:"Chute légère",         description:"Chute dans la cour de récréation", gravite:"faible",  traite:false, date:"2025-04-20", enfant:{ prenom:"Noah",  nom:"Bernard" } },
-  { id:3, type:"Conflit entre enfants",description:"Dispute au sujet d'un jouet",      gravite:"moyenne", traite:true,  date:"2025-04-19", enfant:{ prenom:"Lucas", nom:"Martin"  } },
-];
-
 const GRAVITE_MAP = {
-  élevée:  { bg:T.dangerLight, col:T.danger,  label:"Élevée"  },
-  moyenne: { bg:T.amberLight,  col:T.amber,   label:"Moyenne" },
-  faible:  { bg:T.tealLight,   col:T.teal,    label:"Faible"  },
-  high:    { bg:T.dangerLight, col:T.danger,  label:"Élevée"  },
-  low:     { bg:T.tealLight,   col:T.teal,    label:"Faible"  },
+  eleve:  { bg:T.dangerLight, col:T.danger, label:"Élevée"  },
+  moyen:  { bg:T.amberLight,  col:T.amber,  label:"Moyenne" },
+  faible: { bg:T.tealLight,   col:T.teal,   label:"Faible"  },
 };
 
 const TABS = ["Tous","Non traités","Traités"];
@@ -30,15 +22,15 @@ export default function Incidents() {
   // Formulaire
   const [type,     setType]    = useState("");
   const [desc,     setDesc]    = useState("");
-  const [gravite,  setGravite] = useState("faible");
+  const [gravite,  setGravite] = useState("faible"); // DB values: faible / moyen / eleve
   const [enfantId, setEnfantId]= useState("");
   const [enfants,  setEnfants] = useState([]);
   const [saving,   setSaving]  = useState(false);
 
   useEffect(() => {
     api.get("/incidents")
-      .then(r => setIncidents(r.data?.data?.length ? r.data.data : DEMO))
-      .catch(() => setIncidents(DEMO));
+      .then(r => setIncidents(r.data?.data || []))
+      .catch(() => {});
     api.get("/enfants")
       .then(r => setEnfants(r.data?.data || []))
       .catch(() => {});
@@ -74,7 +66,7 @@ export default function Incidents() {
       });
       toast.success("Incident signalé !");
       setShowForm(false); setType(""); setDesc(""); setGravite("faible"); setEnfantId("");
-      api.get("/incidents").then(r => setIncidents(r.data?.data || DEMO)).catch(() => {});
+      api.get("/incidents").then(r => setIncidents(r.data?.data || [])).catch(() => {});
     } catch {
       toast.error("Erreur lors de l'enregistrement");
     } finally {
@@ -182,15 +174,13 @@ export default function Incidents() {
 
       {/* Modal formulaire signalement */}
       {showForm && (
-        <>
-          <div onClick={() => setShowForm(false)} style={{
-            position:"fixed", inset:0, zIndex:40,
-            background:"rgba(0,0,0,0.45)", backdropFilter:"blur(4px)",
-          }}/>
-          <div style={{
-            position:"fixed", top:"50%", left:"50%",
-            transform:"translate(-50%, -50%)",
-            zIndex:50, width:"100%", maxWidth:480,
+        <div onClick={() => setShowForm(false)} style={{
+          position:"fixed", inset:0, zIndex:40,
+          background:"rgba(0,0,0,0.45)", backdropFilter:"blur(4px)",
+          display:"flex", alignItems:"center", justifyContent:"center",
+        }}>
+          <div onClick={e => e.stopPropagation()} style={{
+            position:"relative", zIndex:50, width:"100%", maxWidth:480,
             background:T.surface, borderRadius:20,
             padding:28, margin:16, boxSizing:"border-box",
             boxShadow:"0 24px 80px rgba(0,0,0,0.2)",
@@ -231,7 +221,7 @@ export default function Incidents() {
                   Gravité *
                 </label>
                 <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:8 }}>
-                  {[["faible","Faible",T.teal,T.tealLight],["moyenne","Moyenne",T.amber,T.amberLight],["élevée","Élevée",T.danger,T.dangerLight]].map(([val,lbl,col,bg]) => (
+                  {[["faible","Faible",T.teal,T.tealLight],["moyen","Moyen",T.amber,T.amberLight],["eleve","Élevée",T.danger,T.dangerLight]].map(([val,lbl,col,bg]) => (
                     <div key={val} onClick={() => setGravite(val)}
                       style={{ padding:"10px", borderRadius:10, textAlign:"center", cursor:"pointer",
                         border:`2px solid ${gravite===val ? col : T.border}`,
@@ -273,7 +263,7 @@ export default function Incidents() {
               </div>
             </form>
           </div>
-        </>
+        </div>
       )}
     </Shell>
   );

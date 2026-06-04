@@ -28,24 +28,16 @@ export default function Login() {
     try {
       const res = await api.post("/login", { email, password });
       localStorage.setItem("token", res.data.token);
-      localStorage.setItem("user", JSON.stringify(res.data.user));
-      const r = res.data.user.role;
-      if (r === "admin")       navigate("/admin/dashboard");
-      else if (r === "parent") navigate("/parent/dashboard");
-      else                     navigate("/edu/dashboard");
+      localStorage.setItem("user", JSON.stringify(res.data.utilisateur));
+      const r = res.data.utilisateur.role;
+      if (r === "administrateur") navigate("/admin/dashboard");
+      else if (r === "parent")    navigate("/parent/dashboard");
+      else                        navigate("/edu/dashboard");
     } catch {
       setError("Identifiants incorrects. Veuillez réessayer.");
     } finally {
       setLoading(false);
     }
-  };
-
-  // Test sans backend
-  const handleTest = () => {
-    localStorage.setItem("user", JSON.stringify({ nom:"Dupont", prenom:"Marie", role }));
-    if (role === "admin")       navigate("/admin/dashboard");
-    else if (role === "parent") navigate("/parent/dashboard");
-    else                        navigate("/edu/dashboard");
   };
 
   return (
@@ -279,40 +271,7 @@ export default function Login() {
                 {loading ? "Connexion..." : "Login"}
               </button>
 
-                {/* Boutons de test — à retirer en production */}
-                <div style={{
-                marginTop: 10, padding: 14, background: "#F8F8F6",
-                borderRadius: 12, border: "1px dashed #E0DED6",
-                }}>
-                <div style={{ fontSize: 11, fontWeight: 700, color: "#B4B2A9", textAlign: "center", marginBottom: 10, textTransform: "uppercase", letterSpacing: "0.06em" }}>
-                    Test sans backend
-                </div>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
-                    {[
-                    ["Éducateur", "edu",    "#1D9E75", "/edu/dashboard"],
-                    ["Parent",    "parent", "#D85A30", "/parent/dashboard"],
-                    ["Admin",     "admin",  "#534AB7", "/admin/dashboard"],
-                    ].map(([label, r, color, path]) => (
-                    <button key={r} type="button"
-                        onClick={() => {
-                        localStorage.setItem("user", JSON.stringify({
-                            nom: "Dupont", prenom: "Marie", role: r
-                        }));
-                        navigate(path);
-                        }}
-                        style={{
-                        padding: "9px 6px", background: color, color: "#fff",
-                        border: "none", borderRadius: 10,
-                        fontFamily: "Nunito,sans-serif", fontWeight: 700,
-                        fontSize: 12, cursor: "pointer",
-                        }}>
-                        {label}
-                    </button>
-                    ))}
-                </div>
-                </div>
-
-            </form>
+              </form>
           </div>
         </div>
       </div>

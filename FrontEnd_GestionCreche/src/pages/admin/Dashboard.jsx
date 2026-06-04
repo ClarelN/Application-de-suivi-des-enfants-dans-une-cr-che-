@@ -20,9 +20,9 @@ const DEMO_INCIDENTS = [
   { id:3, type:"Conflit",              gravite:"moyenne", enfant:{ prenom:"Lucas", nom:"M." }, date:"2025-04-19" },
 ];
 const DEMO_FACTURES = [
-  { id:1, enfant:{ prenom:"Lucas", nom:"Martin"  }, montant_du:"245,00 €", statut:"impayé" },
-  { id:2, id:2, enfant:{ prenom:"Emma",  nom:"Dupont"  }, montant_du:"245,00 €", statut:"impayé" },
-  { id:3, enfant:{ prenom:"Noah",  nom:"Bernard" }, montant_du:"245,00 €", statut:"impayé" },
+  { id:1, enfant:{ prenom:"Lucas", nom:"Martin"  }, montant_du:"45 000 FCFA", statut:"impayé" },
+  { id:2, enfant:{ prenom:"Emma",  nom:"Dupont"  }, montant_du:"45 000 FCFA", statut:"impayé" },
+  { id:3, enfant:{ prenom:"Noah",  nom:"Bernard" }, montant_du:"45 000 FCFA", statut:"impayé" },
 ];
 
 const G_MAP = {
@@ -84,7 +84,7 @@ export default function DashAdmin() {
         <div>
           <div style={{ fontSize:13, opacity:.75, marginBottom:2 }}>{today}</div>
           <div style={{ fontSize:20, fontWeight:800, fontFamily:"Nunito,sans-serif" }}>
-            Bonjour {user.prenom} 👋
+            Bonjour {user.prenom}
           </div>
           <div style={{ fontSize:13, opacity:.75, marginTop:4 }}>Tableau de bord administrateur</div>
         </div>
@@ -220,7 +220,7 @@ export default function DashAdmin() {
             ))}
             <div style={{ padding:"10px 16px", background:T.dangerLight, display:"flex", justifyContent:"space-between", alignItems:"center" }}>
               <span style={{ fontSize:12, color:T.danger, fontWeight:700 }}>
-                Total impayé : {factures.length * 245},00 €
+                Total impayé : {(factures.length * 45000).toLocaleString('fr-FR')} FCFA
               </span>
               <button onClick={() => navigate("/admin/facturation")} style={{
                 padding:"6px 12px", background:T.danger, color:"#fff", border:"none",

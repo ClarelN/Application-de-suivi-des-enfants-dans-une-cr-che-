@@ -14,7 +14,7 @@ export default function Profil({ role = "edu" }) {
   const [form, setForm] = useState({
     nom:       stored.nom       || "",
     prenom:    stored.prenom    || "",
-    email:     stored.email     || "exemple@creche.fr",
+    email:     stored.email     || "exemple@creche.cm",
     telephone: stored.telephone || "",
   });
 
@@ -116,7 +116,7 @@ export default function Profil({ role = "edu" }) {
 
             <div style={{ height:1, background:T.border, margin:"14px 0" }}/>
 
-            {[[Mail, form.email],[Phone, form.telephone||"+33 6 00 00 00 00"]].map(([Icon, val]) => (
+            {[[Mail, form.email],[Phone, form.telephone||"+237 699 000 000"]].map(([Icon, val]) => (
               <div key={val} style={{ display:"flex", gap:8, alignItems:"center", padding:"6px 0", fontSize:12, color:T.text2 }}>
                 <Icon size={13} color={T.text3}/> {val}
               </div>

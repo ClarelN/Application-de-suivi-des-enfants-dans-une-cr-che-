@@ -1,25 +1,21 @@
 import { useState, useEffect } from "react";
 import Shell from "../../components/layout/Shell";
-import { Check, Utensils, Moon, Smile, FileText, ChevronDown } from "lucide-react";
+import { Check, Utensils, Moon, Smile, FileText, ChevronDown, Frown, Meh, ThumbsUp, Star } from "lucide-react";
 import { T } from "../../constants/theme";
 import api from "../../services/api";
 import toast from "react-hot-toast";
 
-const DEMO_ENFANTS = [
-  { id:1, prenom:"Lucas",  nom:"Martin"   },
-  { id:2, prenom:"Emma",   nom:"Dupont"   },
-  { id:3, prenom:"Noah",   nom:"Bernard"  },
-  { id:4, prenom:"Léa",    nom:"Rousseau" },
-  { id:5, prenom:"Tom",    nom:"Petit"    },
+const REPAS_OPTIONS = [
+  { val:"tout",   label:"Tout mangé"    },
+  { val:"un_peu", label:"Un peu mangé"  },
+  { val:"rien",   label:"N'a pas mangé" },
 ];
-
-const REPAS_OPTIONS = ["Très bien mangé","Bien mangé","Peu mangé","N'a pas mangé"];
 const HUMEURS = [
-  { val:1, label:"Triste",    icon:"😢" },
-  { val:2, label:"Neutre",    icon:"😐" },
-  { val:3, label:"Bien",      icon:"🙂" },
-  { val:4, label:"Super",     icon:"😄" },
-  { val:5, label:"Excellent", icon:"🤩" },
+  { val:1, label:"Triste",    Icon:Frown    },
+  { val:2, label:"Neutre",    Icon:Meh      },
+  { val:3, label:"Bien",      Icon:Smile    },
+  { val:4, label:"Super",     Icon:ThumbsUp },
+  { val:5, label:"Excellent", Icon:Star     },
 ];
 
 export default function Suivi() {
@@ -35,8 +31,8 @@ export default function Suivi() {
 
   useEffect(() => {
     api.get("/enfants")
-      .then(r => setEnfants(r.data?.data?.length ? r.data.data : DEMO_ENFANTS))
-      .catch(() => setEnfants(DEMO_ENFANTS));
+      .then(r => setEnfants(r.data?.data || []))
+      .catch(() => {});
   }, []);
 
   const handleSubmit = async (e) => {
@@ -146,16 +142,16 @@ export default function Suivi() {
               </label>
               <div className="suivi-repas">
                 {REPAS_OPTIONS.map(opt => (
-                  <div key={opt} onClick={() => setRepas(opt)}
+                  <div key={opt.val} onClick={() => setRepas(opt.val)}
                     style={{
                       padding:"11px 12px", borderRadius:10, cursor:"pointer", textAlign:"center",
-                      border:`2px solid ${repas===opt ? T.teal : T.border}`,
-                      background: repas===opt ? T.tealLight : T.surface,
+                      border:`2px solid ${repas===opt.val ? T.teal : T.border}`,
+                      background: repas===opt.val ? T.tealLight : T.surface,
                       fontSize:13, fontWeight:700,
-                      color: repas===opt ? T.teal : T.text2,
+                      color: repas===opt.val ? T.teal : T.text2,
                       transition:"all .15s",
                     }}>
-                    {opt}
+                    {opt.label}
                   </div>
                 ))}
               </div>
@@ -192,9 +188,9 @@ export default function Suivi() {
                       height:52, borderRadius:14, display:"flex", alignItems:"center", justifyContent:"center",
                       border:`2px solid ${humeur===h.val ? T.teal : T.border}`,
                       background: humeur===h.val ? T.tealLight : T.bg,
-                      fontSize:26, marginBottom:4, transition:"all .15s",
+                      marginBottom:4, transition:"all .15s",
                     }}>
-                      {h.icon}
+                      <h.Icon size={26} color={humeur===h.val ? T.teal : T.text3}/>
                     </div>
                     <div style={{ fontSize:10, color:humeur===h.val ? T.teal : T.text3, fontWeight:700 }}>
                       {h.label}

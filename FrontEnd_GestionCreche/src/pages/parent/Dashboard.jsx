@@ -4,7 +4,7 @@ import Shell from "../../components/layout/Shell";
 import {
   Baby, CreditCard, MessageSquare, Calendar,
   ChevronRight, Utensils, Moon, Smile, FileText,
-  CheckCircle, AlertTriangle
+  CheckCircle, AlertTriangle, Frown, Meh, ThumbsUp, Star
 } from "lucide-react";
 import { T } from "../../constants/theme";
 import api from "../../services/api";
@@ -25,14 +25,16 @@ const DEMO_MESSAGES = [
   { id:2, sujet:"Fermeture exceptionnelle", expediteur:"Administration", lu:false },
 ];
 
-const DEMO_FACTURE = { montant_du:"245,00 €", mois:"Avril", annee:2025, statut:"impayé" };
+const DEMO_FACTURE = { montant_du:"45 000 FCFA", mois:"Avril", annee:2025, statut:"impayé" };
+
+const HUMEUR_LABELS = ["", "Triste", "Neutre", "Bien", "Super", "Excellent"];
+const HUMEUR_ICONS_MAP = [null, Frown, Meh, Smile, ThumbsUp, Star];
+const HUMEUR_COLORS = ["", "#E24B4A", "#888780", "#1D9E75", "#1D9E75", "#BA7517"];
 
 const DEMO_EVENTS = [
   { id:1, titre:"Sortie au parc municipal", date_debut:"2025-04-25", places_restantes:7 },
   { id:2, titre:"Spectacle de marionnettes", date_debut:"2025-05-02", places_restantes:12 },
 ];
-
-const HUMEUR_ICONS = ["","😢","😐","🙂","😄","🤩"];
 
 const calcAge = (dob) => {
   if (!dob) return "";
@@ -99,7 +101,7 @@ export default function DashParent() {
           <Baby size={36} color="#fff" strokeWidth={1.5}/>
         </div>
         <div style={{ flex:1 }}>
-          <div style={{ fontSize:13, opacity:.8 }}>Bonjour {user.prenom} 👋 · {today}</div>
+          <div style={{ fontSize:13, opacity:.8 }}>Bonjour {user.prenom} · {today}</div>
           <div style={{ fontSize:22, fontWeight:800, fontFamily:"Nunito,sans-serif", marginTop:2 }}>
             {e.prenom} {e.nom}
           </div>
@@ -137,7 +139,7 @@ export default function DashParent() {
               Historique <ChevronRight size={12}/>
             </button>
           </div>
-          {[[Utensils,"Repas",s.repas],[Moon,"Sieste",s.sieste_debut&&s.sieste_fin?`${s.sieste_debut} → ${s.sieste_fin}`:"Non renseigné"],[Smile,"Humeur",`${HUMEUR_ICONS[s.humeur]||"🙂"} ${["","Triste","Neutre","Bien","Super","Excellent"][s.humeur]||"Non renseigné"}`],[FileText,"Note éducateur",s.note||"Aucune note"]].map(([Icon, label, val]) => (
+          {[[Utensils,"Repas",s.repas],[Moon,"Sieste",s.sieste_debut&&s.sieste_fin?`${s.sieste_debut} → ${s.sieste_fin}`:"Non renseigné"],[Smile,"Humeur",HUMEUR_LABELS[s.humeur]||"Non renseigné"],[FileText,"Note éducateur",s.note||"Aucune note"]].map(([Icon, label, val]) => (
             <div key={label} style={{ display:"flex", gap:14, padding:"12px 16px", borderBottom:`1px solid ${T.border}`, alignItems:"flex-start" }}>
               <div style={{ width:32, height:32, borderRadius:9, background:T.coralLight, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
                 <Icon size={15} color={T.coral}/>

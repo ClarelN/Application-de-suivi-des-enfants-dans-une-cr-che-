@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import Shell from "../../components/layout/Shell";
 import {
   Baby, CheckSquare, BookOpen, AlertTriangle,
-  MessageSquare, Clock, TrendingUp, ChevronRight
+  MessageSquare, Clock, UserX, ChevronRight
 } from "lucide-react";
 import { T } from "../../constants/theme";
 import { useNavigate } from "react-router-dom";
@@ -70,8 +70,8 @@ export default function DashEdu() {
 
   const statCards = [
     { label:"Présents",      value:displayStats.presents, Icon:CheckSquare, color:T.teal,   bg:T.tealLight },
-    { label:"Absents",       value:displayStats.absents,  Icon:Clock,       color:T.danger, bg:T.dangerLight },
-    { label:"Retards",       value:displayStats.retards,  Icon:TrendingUp,  color:T.amber,  bg:T.amberLight },
+    { label:"Absents",       value:displayStats.absents,  Icon:UserX,       color:T.danger, bg:T.dangerLight },
+    { label:"Retards",       value:displayStats.retards,  Icon:Clock,       color:T.amber,  bg:T.amberLight },
     { label:"Suivis à faire",value:displayStats.suivis,   Icon:BookOpen,    color:T.purple, bg:T.purpleLight },
   ];
 
@@ -108,7 +108,7 @@ export default function DashEdu() {
         <div>
           <div style={{ fontSize: 13, opacity: .75, marginBottom: 2 }}>{today}</div>
           <div style={{ fontSize: 20, fontWeight: 800, fontFamily: "Nunito,sans-serif" }}>
-            Bonjour {user.prenom} 👋
+            Bonjour {user.prenom}
           </div>
           <div style={{ fontSize: 13, opacity: .75, marginTop: 4 }}>
             Groupe Les Poussins

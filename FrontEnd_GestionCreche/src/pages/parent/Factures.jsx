@@ -2,34 +2,34 @@ import { useState, useEffect } from "react";
 import Shell from "../../components/layout/Shell";
 import { Download, CreditCard, Check, Clock } from "lucide-react";
 import { T } from "../../constants/theme";
-import api from "../../services/api";
+import api, { storageUrl } from "../../services/api";
 import toast from "react-hot-toast";
 
-const DEMO = [
-  { id:1, mois:4, annee:2025, montant_du:"245.00", statut:"impayé", pdf_chemin:null      },
-  { id:2, mois:3, annee:2025, montant_du:"245.00", statut:"payé",   pdf_chemin:"/f2.pdf" },
-  { id:3, mois:2, annee:2025, montant_du:"245.00", statut:"payé",   pdf_chemin:"/f3.pdf" },
-  { id:4, mois:1, annee:2025, montant_du:"245.00", statut:"payé",   pdf_chemin:"/f4.pdf" },
-];
-
 const MOIS = ["","Janvier","Février","Mars","Avril","Mai","Juin","Juillet","Août","Septembre","Octobre","Novembre","Décembre"];
+
+const STATUT = {
+  regle:               { label:"Payé",    color:"teal",   isPaid:true  },
+  en_attente:          { label:"Impayé",  color:"danger", isPaid:false },
+  partiellement_regle: { label:"Partiel", color:"amber",  isPaid:false },
+};
+const getStatut = (s) => STATUT[s] || STATUT.en_attente;
 
 export default function Factures() {
   const [factures, setFactures] = useState([]);
 
   useEffect(() => {
     api.get("/parent/factures")
-      .then(r => setFactures(r.data?.data?.length ? r.data.data : DEMO))
-      .catch(() => setFactures(DEMO));
+      .then(r => setFactures(r.data?.data || []))
+      .catch(() => {});
   }, []);
 
   const totalDu = factures
-    .filter(f => f.statut === "impayé")
+    .filter(f => !getStatut(f.statut).isPaid)
     .reduce((acc, f) => acc + parseFloat(f.montant_du||0), 0);
 
   const handleDownload = (f) => {
     if (f.pdf_chemin) {
-      window.open(`http://127.0.0.1:8000/storage/${f.pdf_chemin}`, "_blank");
+      window.open(storageUrl(f.pdf_chemin), "_blank");
     } else {
       toast.error("PDF non disponible pour cette facture");
     }
@@ -46,10 +46,10 @@ export default function Factures() {
             <span style={{ fontSize:12, fontWeight:700, color:T.danger }}>Montant restant dû</span>
           </div>
           <div style={{ fontSize:28, fontWeight:900, fontFamily:"Nunito,sans-serif", color:T.text1 }}>
-            {totalDu.toFixed(2)} €
+            {Math.round(totalDu).toLocaleString('fr-FR')} FCFA
           </div>
           <div style={{ fontSize:12, color:T.text2 }}>
-            {factures.filter(f => f.statut==="impayé").length} facture{factures.filter(f => f.statut==="impayé").length>1?"s":""} impayée{factures.filter(f => f.statut==="impayé").length>1?"s":""}
+            {factures.filter(f => !getStatut(f.statut).isPaid).length} facture{factures.filter(f => !getStatut(f.statut).isPaid).length>1?"s":""} impayée{factures.filter(f => !getStatut(f.statut).isPaid).length>1?"s":""}
           </div>
         </div>
         <div style={{ background:T.tealLight, borderRadius:14, padding:18, border:`1px solid ${T.teal}25` }}>
@@ -58,7 +58,7 @@ export default function Factures() {
             <span style={{ fontSize:12, fontWeight:700, color:T.tealDark }}>Factures payées</span>
           </div>
           <div style={{ fontSize:28, fontWeight:900, fontFamily:"Nunito,sans-serif", color:T.text1 }}>
-            {factures.filter(f => f.statut==="payé").length}
+            {factures.filter(f => f.statut==="regle").length}
           </div>
           <div style={{ fontSize:12, color:T.text2 }}>cette année</div>
         </div>
@@ -72,8 +72,8 @@ export default function Factures() {
         {factures.map((f, i) => (
           <div key={f.id || i} style={{ display:"flex", alignItems:"center", gap:14, padding:"14px 18px", borderBottom:`1px solid ${T.border}` }}>
             {/* Icône */}
-            <div style={{ width:44, height:44, borderRadius:12, background:f.statut==="payé"?T.tealLight:T.dangerLight, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
-              {f.statut==="payé"
+            <div style={{ width:44, height:44, borderRadius:12, background:getStatut(f.statut).isPaid?T.tealLight:T.dangerLight, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
+              {getStatut(f.statut).isPaid
                 ? <Check size={20} color={T.teal}/>
                 : <Clock size={20} color={T.danger}/>}
             </div>
@@ -88,11 +88,11 @@ export default function Factures() {
 
             {/* Montant */}
             <div style={{ textAlign:"right" }}>
-              <div style={{ fontSize:16, fontWeight:900, fontFamily:"Nunito,sans-serif", color:f.statut==="payé"?T.teal:T.danger }}>
-                {parseFloat(f.montant_du).toFixed(2)} €
+              <div style={{ fontSize:16, fontWeight:900, fontFamily:"Nunito,sans-serif", color:getStatut(f.statut).isPaid?T.teal:T.danger }}>
+                {Math.round(parseFloat(f.montant_du)||0).toLocaleString('fr-FR')} FCFA
               </div>
-              <span style={{ background:f.statut==="payé"?T.tealLight:T.dangerLight, color:f.statut==="payé"?T.tealDark:T.danger, padding:"2px 8px", borderRadius:20, fontSize:11, fontWeight:700 }}>
-                {f.statut==="payé" ? "Payé" : "Impayé"}
+              <span style={{ background:getStatut(f.statut).isPaid?T.tealLight:T.dangerLight, color:getStatut(f.statut).isPaid?T.tealDark:T.danger, padding:"2px 8px", borderRadius:20, fontSize:11, fontWeight:700 }}>
+                {getStatut(f.statut).label}
               </span>
             </div>
 

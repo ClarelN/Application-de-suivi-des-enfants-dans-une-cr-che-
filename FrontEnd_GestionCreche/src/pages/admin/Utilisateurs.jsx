@@ -1,26 +1,18 @@
 import { useState, useEffect } from "react";
 import Shell from "../../components/layout/Shell";
-import { Search, UserPlus, Edit2, X, Check, Shield, BookOpen, Heart } from "lucide-react";
+import { Search, UserPlus, Edit2, X, Check, Shield, BookOpen, Heart, ChevronLeft, ChevronRight } from "lucide-react";
 import { T } from "../../constants/theme";
 import api from "../../services/api";
 import toast from "react-hot-toast";
 import Swal from "sweetalert2";
 
-const DEMO = [
-  { id:1, nom:"Dupont",  prenom:"Marie",  email:"marie@creche.fr",   role:"edu",    actif:true  },
-  { id:2, nom:"Martin",  prenom:"Sophie", email:"sophie@gmail.com",   role:"parent", actif:true  },
-  { id:3, nom:"Bernard", prenom:"Jean",   email:"jean@creche.fr",     role:"admin",  actif:true  },
-  { id:4, nom:"Petit",   prenom:"Claire", email:"claire@creche.fr",   role:"edu",    actif:false },
-  { id:5, nom:"Leroy",   prenom:"Paul",   email:"paul@gmail.com",     role:"parent", actif:true  },
-];
-
 const ROLE_CONFIG = {
-  edu:    { label:"Éducateur", Icon:BookOpen, color:T.teal,   bg:T.tealLight   },
-  parent: { label:"Parent",    Icon:Heart,    color:T.coral,  bg:T.coralLight  },
-  admin:  { label:"Admin",     Icon:Shield,   color:T.purple, bg:T.purpleLight },
+  educateur:      { label:"Éducateur", Icon:BookOpen, color:T.teal,   bg:T.tealLight   },
+  parent:         { label:"Parent",    Icon:Heart,    color:T.coral,  bg:T.coralLight  },
+  administrateur: { label:"Admin",     Icon:Shield,   color:T.purple, bg:T.purpleLight },
 };
 
-const EMPTY_FORM = { nom:"", prenom:"", email:"", role:"edu", password:"", actif:true };
+const EMPTY_FORM = { nom:"", prenom:"", email:"", role:"educateur", password:"", actif:true };
 
 export default function Utilisateurs() {
   const [users,    setUsers]    = useState([]);
@@ -30,11 +22,13 @@ export default function Utilisateurs() {
   const [editing,  setEditing]  = useState(null);
   const [form,     setForm]     = useState(EMPTY_FORM);
   const [saving,   setSaving]   = useState(false);
+  const [page,     setPage]     = useState(1);
+  const PER_PAGE = 10;
 
   useEffect(() => {
     api.get("/utilisateurs")
-      .then(r => setUsers(r.data?.data?.length ? r.data.data : DEMO))
-      .catch(() => setUsers(DEMO));
+      .then(r => setUsers(r.data?.data || []))
+      .catch(() => {});
   }, []);
 
   const filtered = users.filter(u => {
@@ -43,6 +37,8 @@ export default function Utilisateurs() {
     const rMatch = roleFilter === "tous" || u.role === roleFilter;
     return match && rMatch;
   });
+  const totalPages = Math.ceil(filtered.length / PER_PAGE);
+  const paginated  = filtered.slice((page - 1) * PER_PAGE, page * PER_PAGE);
 
   const openCreate = () => { setEditing(null); setForm(EMPTY_FORM); setShowForm(true); };
   const openEdit   = (u) => { setEditing(u); setForm({ nom:u.nom, prenom:u.prenom, email:u.email, role:u.role, password:"", actif:u.actif }); setShowForm(true); };
@@ -84,7 +80,7 @@ export default function Utilisateurs() {
             style={{ width:"100%", padding:"9px 12px 9px 33px", borderRadius:10, border:`1.5px solid ${T.border}`, fontSize:13, fontFamily:"Nunito Sans,sans-serif", outline:"none", boxSizing:"border-box" }}/>
         </div>
         <div style={{ display:"flex", gap:6 }}>
-          {["tous","edu","parent","admin"].map(r => (
+          {["tous","educateur","parent","administrateur"].map(r => (
             <button key={r} onClick={() => setRoleFilter(r)} style={{
               padding:"8px 14px", borderRadius:10, border:`1px solid ${T.border}`,
               background: roleFilter===r ? T.purple : T.surface,
@@ -107,7 +103,8 @@ export default function Utilisateurs() {
 
       {/* Tableau */}
       <div style={{ background:T.surface, borderRadius:14, border:`1px solid ${T.border}`, overflow:"hidden" }}>
-        <table style={{ width:"100%", borderCollapse:"collapse" }}>
+        <div style={{ overflowX:"auto" }}>
+        <table style={{ width:"100%", borderCollapse:"collapse", minWidth:560 }}>
           <thead>
             <tr style={{ background:T.bg, borderBottom:`2px solid ${T.border}` }}>
               {["Utilisateur","Rôle","Email","Statut","Actions"].map(h => (
@@ -116,7 +113,7 @@ export default function Utilisateurs() {
             </tr>
           </thead>
           <tbody>
-            {filtered.map(u => {
+            {paginated.map(u => {
               const R = ROLE_CONFIG[u.role] || ROLE_CONFIG.edu;
               const ini = `${(u.prenom||"?")[0]}${(u.nom||"?")[0]}`;
               return (
@@ -158,16 +155,29 @@ export default function Utilisateurs() {
             })}
           </tbody>
         </table>
-        <div style={{ padding:"12px 14px", background:T.bg, borderTop:`1px solid ${T.border}`, fontSize:12, color:T.text2 }}>
-          {filtered.length} utilisateur{filtered.length > 1 ? "s" : ""} · {users.filter(u => u.actif).length} actifs
+        </div>
+        <div style={{ padding:"12px 14px", background:T.bg, borderTop:`1px solid ${T.border}`, display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+          <span style={{ fontSize:12, color:T.text2 }}>{filtered.length} utilisateur{filtered.length > 1 ? "s" : ""} · {users.filter(u => u.actif).length} actifs</span>
+          {totalPages > 1 && (
+            <div style={{ display:"flex", gap:6, alignItems:"center" }}>
+              <button onClick={() => setPage(p => Math.max(1, p-1))} disabled={page===1}
+                style={{ padding:"5px 10px", borderRadius:8, border:`1px solid ${T.border}`, background:T.surface, cursor:page===1?"not-allowed":"pointer", opacity:page===1?0.4:1, display:"flex", alignItems:"center" }}>
+                <ChevronLeft size={14}/>
+              </button>
+              <span style={{ fontSize:12, color:T.text2 }}>Page {page}/{totalPages}</span>
+              <button onClick={() => setPage(p => Math.min(totalPages, p+1))} disabled={page===totalPages}
+                style={{ padding:"5px 10px", borderRadius:8, border:`1px solid ${T.border}`, background:T.surface, cursor:page===totalPages?"not-allowed":"pointer", opacity:page===totalPages?0.4:1, display:"flex", alignItems:"center" }}>
+                <ChevronRight size={14}/>
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
       {/* Modal */}
       {showForm && (
-        <>
-          <div onClick={() => setShowForm(false)} style={{ position:"fixed", inset:0, zIndex:40, background:"rgba(0,0,0,0.45)", backdropFilter:"blur(4px)" }}/>
-          <div style={{ position:"fixed", top:"50%", left:"50%", transform:"translate(-50%,-50%)", zIndex:50, width:"100%", maxWidth:460, background:T.surface, borderRadius:20, padding:28, margin:16, boxSizing:"border-box", boxShadow:"0 24px 80px rgba(0,0,0,0.2)" }}>
+        <div onClick={() => setShowForm(false)} style={{ position:"fixed", inset:0, zIndex:40, background:"rgba(0,0,0,0.45)", backdropFilter:"blur(4px)", display:"flex", alignItems:"center", justifyContent:"center" }}>
+          <div onClick={e => e.stopPropagation()} style={{ position:"relative", zIndex:50, width:"100%", maxWidth:460, background:T.surface, borderRadius:20, padding:28, margin:16, boxSizing:"border-box", boxShadow:"0 24px 80px rgba(0,0,0,0.2)" }}>
             <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:20 }}>
               <div style={{ fontSize:17, fontWeight:800, fontFamily:"Nunito,sans-serif" }}>
                 {editing ? "Modifier l'utilisateur" : "Créer un compte"}
@@ -222,7 +232,7 @@ export default function Utilisateurs() {
               </div>
             </form>
           </div>
-        </>
+        </div>
       )}
     </Shell>
   );

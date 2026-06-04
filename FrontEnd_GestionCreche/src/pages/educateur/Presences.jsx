@@ -60,7 +60,7 @@ export default function Presences() {
     try {
       const today_date = new Date().toISOString().split("T")[0];
       await Promise.all(enfants.map(e =>
-        api.post("/attendances/mark", {
+        api.post("/presences", {
           enfant_id: e.id,
           date: today_date,
           status: statuts[e.id] || "present",

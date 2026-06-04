@@ -3,32 +3,15 @@ import { useNavigate } from "react-router-dom";
 import Shell from "../../components/layout/Shell";
 import {
   Baby, AlertTriangle, BookOpen,
-  UserCheck, ChevronRight, CheckSquare
+  UserCheck, ChevronRight, CheckSquare,
+  Frown, Meh, Smile, ThumbsUp, Star, Utensils, Moon
 } from "lucide-react";
 import { T } from "../../constants/theme";
 import api from "../../services/api";
 
-const DEMO_ENFANT = {
-  id:1, nom:"Martin", prenom:"Lucas",
-  date_naissance:"2021-03-15", sexe:"M",
-  allergie:"Arachides, fruits à coque",
-  obs_medicale:"Asthme léger — inhalateur dans le sac",
-  statut:"actif", statut_presence:"present",
-  groupe:{ nom:"Les Poussins" },
-  personnes_autorisees:[
-    { id:1, nom:"Martin",  prenom:"Sophie", lien_parente:"Mère",       telephone:"06 12 34 56 78" },
-    { id:2, nom:"Martin",  prenom:"Jean",   lien_parente:"Père",       telephone:"06 98 76 54 32" },
-    { id:3, nom:"Dupont",  prenom:"Claire", lien_parente:"Grand-mère", telephone:"06 55 44 33 22" },
-  ],
-};
-
-const DEMO_SUIVIS = [
-  { id:1, date:"2025-04-22", repas:"Très bien mangé", sieste_debut:"13:30", sieste_fin:"15:00", humeur:4, note:"Journée agréable" },
-  { id:2, date:"2025-04-21", repas:"Bien mangé",      sieste_debut:"14:00", sieste_fin:"15:30", humeur:3, note:"Un peu fatigué"   },
-  { id:3, date:"2025-04-20", repas:"Peu mangé",       sieste_debut:"13:00", sieste_fin:"14:30", humeur:2, note:"Pas dans son assiette" },
-];
-
-const HUMEUR_ICONS = ["","😢","😐","🙂","😄","🤩"];
+const REPAS_LABELS     = { tout:"Tout mangé", un_peu:"Un peu mangé", rien:"N'a pas mangé" };
+const HUMEUR_ICONS_MAP = [null, Frown, Meh, Smile, ThumbsUp, Star];
+const HUMEUR_COLORS    = ["", "#E24B4A", "#888780", "#1D9E75", "#1D9E75", "#BA7517"];
 
 const calcAge = (dob) => {
   if (!dob) return "";
@@ -43,14 +26,20 @@ export default function MonEnfant() {
 
   useEffect(() => {
     api.get("/parent/enfant")
-      .then(r => setEnfant(r.data?.data || DEMO_ENFANT))
-      .catch(() => setEnfant(DEMO_ENFANT));
+      .then(r => setEnfant(r.data?.data || null))
+      .catch(() => {});
     api.get("/parent/suivis")
-      .then(r => setSuivis(r.data?.data?.slice(0,3) || DEMO_SUIVIS))
-      .catch(() => setSuivis(DEMO_SUIVIS));
+      .then(r => setSuivis((r.data?.data || []).slice(0, 3)))
+      .catch(() => {});
   }, []);
 
-  const e = enfant || DEMO_ENFANT;
+  if (!enfant) return (
+    <Shell role="parent" title="Mon enfant">
+      <div style={{ padding:40, textAlign:"center", color:T.text2 }}>Chargement…</div>
+    </Shell>
+  );
+
+  const e = enfant;
   const ini = `${(e.prenom||"?")[0]}${(e.nom||"?")[0]}`;
 
   const presColors = {
@@ -60,8 +49,8 @@ export default function MonEnfant() {
   };
   const [pbg, pcol, plabel] = presColors[e.statut_presence] || presColors.present;
 
-  const displaySuivis  = suivis.length  ? suivis  : DEMO_SUIVIS;
-  const personnes      = e.personnes_autorisees || DEMO_ENFANT.personnes_autorisees;
+  const displaySuivis = suivis;
+  const personnes     = e.personnes_autorisees || [];
   const pBgs  = [T.coralLight,  T.tealLight,  T.purpleLight];
   const pCols = [T.coralDark,   T.tealDark,   T.purpleDark ];
 
@@ -167,15 +156,16 @@ export default function MonEnfant() {
             </div>
             {displaySuivis.map((s, i) => (
               <div key={s.id || i} style={{ display:"flex", alignItems:"center", gap:14, padding:"12px 16px", borderBottom:`1px solid ${T.border}` }}>
-                <div style={{ width:38, height:38, borderRadius:10, background:T.coralLight, display:"flex", alignItems:"center", justifyContent:"center", fontSize:20, flexShrink:0 }}>
-                  {HUMEUR_ICONS[s.humeur] || "🙂"}
+                <div style={{ width:38, height:38, borderRadius:10, background:T.coralLight, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
+                  {(() => { const HI = HUMEUR_ICONS_MAP[s.humeur] || Smile; return <HI size={20} color={HUMEUR_COLORS[s.humeur] || T.coral}/>; })()}
                 </div>
                 <div style={{ flex:1 }}>
                   <div style={{ fontSize:13, fontWeight:700, fontFamily:"Nunito,sans-serif" }}>
                     {new Date(s.date).toLocaleDateString("fr-FR", { weekday:"long", day:"numeric", month:"long" })}
                   </div>
-                  <div style={{ fontSize:12, color:T.text2 }}>
-                    🍽️ {s.repas} · 😴 {s.sieste_debut}–{s.sieste_fin}
+                  <div style={{ fontSize:12, color:T.text2, display:"flex", gap:6, alignItems:"center", flexWrap:"wrap" }}>
+                    <Utensils size={11}/> {REPAS_LABELS[s.repas] ?? s.repas}
+                    {s.sieste_debut && <><Moon size={11}/> {s.sieste_debut}–{s.sieste_fin}</>}
                   </div>
                 </div>
                 {s.note && (

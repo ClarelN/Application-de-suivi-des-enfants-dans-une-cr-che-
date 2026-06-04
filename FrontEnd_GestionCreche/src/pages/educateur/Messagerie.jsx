@@ -1,251 +1,595 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import Shell from "../../components/layout/Shell";
-import { Search, Plus, Send, X, Check, CheckCheck } from "lucide-react";
+import {
+  Search, Plus, Send, X, Paperclip, Download,
+  FileText, ArrowLeft, Image, Film, MessageSquare,
+} from "lucide-react";
 import { T } from "../../constants/theme";
 import api from "../../services/api";
 import toast from "react-hot-toast";
 
-const DEMO_MESSAGES = [
-  { id:1, sujet:"Compte-rendu sortie parc", corps:"Bonjour, voici le compte-rendu de la sortie au parc de ce matin. Tous les enfants ont bien participé et profité du beau temps.", expediteur:"Sophie Martin", expediteur_id:2, lu:false, created_at:"2025-04-22T09:14:00" },
-  { id:2, sujet:"Réunion équipe jeudi",     corps:"Bonjour à tous, je vous rappelle la réunion pédagogique mensuelle jeudi à 17h30 en salle de réunion.", expediteur:"Direction",      expediteur_id:3, lu:false, created_at:"2025-04-21T14:30:00" },
-  { id:3, sujet:"Absence de Lucas demain", corps:"Bonjour Madame Dupont, je vous informe que Lucas sera absent demain pour raison médicale.", expediteur:"Jean Martin",     expediteur_id:4, lu:true,  created_at:"2025-04-21T08:00:00" },
-  { id:4, sujet:"Facture Avril 2025",      corps:"Veuillez trouver ci-joint la facture du mois d'avril 2025.", expediteur:"Administration",  expediteur_id:5, lu:true,  created_at:"2025-04-20T10:00:00" },
-];
+// ── Helpers ──────────────────────────────────────────────────────────────────
 
-const DEMO_USERS = [
-  { id:2, prenom:"Sophie", nom:"Martin"  },
-  { id:3, prenom:"Jean",   nom:"Bernard" },
-  { id:4, prenom:"Claire", nom:"Dupont"  },
-];
+const getStoredUser = () => {
+  try { return JSON.parse(localStorage.getItem("user")) || {}; } catch { return {}; }
+};
 
-const fmt = (d) => {
+const getShellRole = (role) => {
+  if (role === "administrateur") return "admin";
+  if (role === "educateur")      return "edu";
+  return "parent";
+};
+
+const nomContact = (u) =>
+  u ? `${u.prenom || ""} ${u.nom || ""}`.trim() || "?" : "?";
+
+const iniContact = (u) =>
+  nomContact(u).split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase() || "?";
+
+const fmtDate = (d) => {
   if (!d) return "";
   const date = new Date(d);
   const now  = new Date();
   const diff = Math.floor((now - date) / 86400000);
-  if (diff === 0) return date.toLocaleTimeString("fr-FR", { hour:"2-digit", minute:"2-digit" });
+  if (diff === 0) return date.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
   if (diff === 1) return "Hier";
-  if (diff < 7)  return date.toLocaleDateString("fr-FR", { weekday:"short" });
-  return date.toLocaleDateString("fr-FR", { day:"2-digit", month:"2-digit" });
+  if (diff < 7)  return date.toLocaleDateString("fr-FR", { weekday: "short" });
+  return date.toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit" });
 };
 
-const ini = (nom) => (nom || "?").split(" ").map(n => n[0]).join("").slice(0,2).toUpperCase();
+const fmtHeure = (d) => {
+  if (!d) return "";
+  return new Date(d).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+};
 
-const AV_COLORS = ["teal","coral","purple","amber"];
-const avBg  = (i) => [T.tealLight, T.coralLight, T.purpleLight, T.amberLight][i % 4];
-const avCol = (i) => [T.tealDark,  T.coralDark,  T.purpleDark,  T.amber      ][i % 4];
+const fmtTaille = (bytes) => {
+  if (!bytes) return "";
+  if (bytes < 1024)        return `${bytes} o`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} Ko`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} Mo`;
+};
+
+const ROLE_LABEL = {
+  educateur:      "Éducateur",
+  administrateur: "Administrateur",
+  parent:         "Parent",
+};
+
+const AV_BG  = [T.tealLight,  T.coralLight,  T.purpleLight, T.amberLight];
+const AV_COL = [T.tealDark,   T.coralDark,   T.purpleDark,  T.amber];
+const avBg  = (id) => AV_BG[(id  || 0) % 4];
+const avCol = (id) => AV_COL[(id || 0) % 4];
+
+// ── Component ─────────────────────────────────────────────────────────────────
 
 export default function Messagerie() {
-  const [messages,  setMessages]  = useState([]);
-  const [selected,  setSelected]  = useState(null);
-  const [search,    setSearch]    = useState("");
-  const [showNew,   setShowNew]   = useState(false);
-  const [users,     setUsers]     = useState([]);
-  const [reply,     setReply]     = useState("");
-  const [sending,   setSending]   = useState(false);
-  // Nouveau message
-  const [newDest,   setNewDest]   = useState("");
-  const [newSujet,  setNewSujet]  = useState("");
-  const [newCorps,  setNewCorps]  = useState("");
-  const [showMobile, setShowMobile] = useState(false);
+  const me     = getStoredUser();
+  const myId   = me.id;
+  const role   = getShellRole(me.role);
 
+  // ── State ──
+  const [convs,       setConvs]       = useState([]);   // liste conversations
+  const [contacts,    setContacts]    = useState([]);   // contacts dispo
+  const [selected,    setSelected]    = useState(null); // contact actif
+  const [messages,    setMessages]    = useState([]);   // messages de la conv
+  const [text,        setText]        = useState("");
+  const [file,        setFile]        = useState(null);
+  const [filePreview, setFilePreview] = useState(null);
+  const [sending,     setSending]     = useState(false);
+  const [loadingConv, setLoadingConv] = useState(false);
+  const [search,      setSearch]      = useState("");
+  const [showPicker,  setShowPicker]  = useState(false);
+  const [mobileConv,  setMobileConv]  = useState(false); // mobile: vue conversation
+  const [lightbox,    setLightbox]    = useState(null);  // URL image plein écran
+
+  const bottomRef   = useRef(null);
+  const fileRef     = useRef(null);
+  const textareaRef = useRef(null);
+
+  // ── Chargement initial ──
   useEffect(() => {
-    api.get("/messages")
-      .then(r => {
-        const data = r.data?.data || [];
-        setMessages(data.length ? data : DEMO_MESSAGES);
-        if (!selected && (data.length || DEMO_MESSAGES.length)) {
-          setSelected(data[0] || DEMO_MESSAGES[0]);
-        }
-      })
-      .catch(() => {
-        setMessages(DEMO_MESSAGES);
-        setSelected(DEMO_MESSAGES[0]);
-      });
-    api.get("/utilisateurs")
-      .then(r => setUsers(r.data?.data || DEMO_USERS))
-      .catch(() => setUsers(DEMO_USERS));
+    api.get("/messages").then(r => setConvs(r.data?.data || [])).catch(() => {});
+    api.get("/messages/contacts").then(r => setContacts(r.data?.data || [])).catch(() => {});
   }, []);
 
-  const handleSelect = (msg) => {
-    setSelected(msg);
-    setShowMobile(true);
-    if (!msg.lu) {
-      setMessages(prev => prev.map(m => m.id === msg.id ? { ...m, lu:true } : m));
-      api.patch(`/messages/${msg.id}`, { lu:true }).catch(() => {});
+  // ── Charger conversation quand on change de contact ──
+  useEffect(() => {
+    if (!selected) return;
+    setLoadingConv(true);
+    setMessages([]);
+    api.get(`/messages/conversation/${selected.id}`)
+      .then(r => {
+        setMessages(r.data?.data || []);
+        api.get("/messages").then(r2 => setConvs(r2.data?.data || [])).catch(() => {});
+      })
+      .catch(() => toast.error("Impossible de charger la conversation"))
+      .finally(() => setLoadingConv(false));
+  }, [selected?.id]);
+
+  // ── Scroll vers le bas à chaque nouveau message ──
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
+  // ── Sélectionner un contact ──
+  const selectContact = (contact) => {
+    setSelected(contact);
+    setShowPicker(false);
+    setMobileConv(true);
+    setText("");
+    clearFile();
+  };
+
+  // ── Gestion fichier ──
+  const handleFileChange = (e) => {
+    const f = e.target.files?.[0];
+    if (!f) return;
+    if (f.size > 50 * 1024 * 1024) {
+      toast.error("Fichier trop volumineux (max 50 Mo)");
+      return;
+    }
+    setFile(f);
+    if (f.type.startsWith("image/") || f.type.startsWith("video/")) {
+      setFilePreview(URL.createObjectURL(f));
+    } else {
+      setFilePreview(null);
     }
   };
 
-  const handleReply = async () => {
-    if (!reply.trim() || !selected) return;
+  const clearFile = useCallback(() => {
+    setFile(null);
+    if (filePreview) URL.revokeObjectURL(filePreview);
+    setFilePreview(null);
+    if (fileRef.current) fileRef.current.value = "";
+  }, [filePreview]);
+
+  // ── Envoi ──
+  const handleSend = async () => {
+    if (!selected || (!text.trim() && !file) || sending) return;
     setSending(true);
     try {
-      await api.post("/messages", {
-        destinataire_id: selected.expediteur_id,
-        sujet: `Re: ${selected.sujet}`,
-        corps: reply,
-      });
-      toast.success("Message envoyé !");
-      setReply("");
+      let res;
+      if (file) {
+        const fd = new FormData();
+        fd.append("destinataire_id", selected.id);
+        if (text.trim()) fd.append("corps", text.trim());
+        fd.append("fichier", file);
+        res = await api.post("/messages", fd);
+      } else {
+        res = await api.post("/messages", {
+          destinataire_id: selected.id,
+          corps: text.trim(),
+        });
+      }
+      const newMsg = res.data?.data || res.data;
+      setMessages(prev => [...prev, newMsg]);
+      setText("");
+      clearFile();
+      api.get("/messages").then(r => setConvs(r.data?.data || [])).catch(() => {});
     } catch {
-      toast.success("Message envoyé !");
-      setReply("");
+      toast.error("Erreur lors de l'envoi");
     } finally {
       setSending(false);
     }
   };
 
-  const handleNewMessage = async (e) => {
-    e.preventDefault();
-    if (!newDest || !newSujet || !newCorps) return toast.error("Remplissez tous les champs");
-    setSending(true);
-    try {
-      await api.post("/messages", {
-        destinataire_id: newDest,
-        sujet: newSujet,
-        corps: newCorps,
-      });
-      toast.success("Message envoyé !");
-      setShowNew(false); setNewDest(""); setNewSujet(""); setNewCorps("");
-    } catch {
-      toast.success("Message envoyé !");
-      setShowNew(false); setNewDest(""); setNewSujet(""); setNewCorps("");
-    } finally {
-      setSending(false);
+  const handleKeyDown = (e) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleSend();
     }
   };
 
-  const filtered = messages.filter(m =>
-    m.sujet?.toLowerCase().includes(search.toLowerCase()) ||
-    m.expediteur?.toLowerCase().includes(search.toLowerCase())
+  // ── Filtres ──
+  const filteredConvs = convs.filter(c =>
+    nomContact(c.contact).toLowerCase().includes(search.toLowerCase())
   );
-  const nonLus = messages.filter(m => !m.lu).length;
 
+  // Contacts sans conversation existante (pour le picker "Nouveau")
+  const newContacts = contacts.filter(c =>
+    !convs.find(cv => cv.contact?.id === c.id) &&
+    nomContact(c).toLowerCase().includes(search.toLowerCase())
+  );
+
+  const totalUnread = convs.reduce((a, c) => a + (c.non_lus || 0), 0);
+
+  // ── Rendu d'un message ──
+  const renderMessage = (msg, i) => {
+    const isMine = msg.expediteur_id === myId || msg.expediteur?.id === myId;
+    const time   = msg.envoye_le || msg.created_at;
+
+    return (
+      <div key={msg.id || i} style={{
+        display: "flex",
+        flexDirection: isMine ? "row-reverse" : "row",
+        alignItems: "flex-end",
+        gap: 8,
+        marginBottom: 10,
+      }}>
+
+        {/* Avatar */}
+        {!isMine && (
+          <div style={{
+            width: 30, height: 30, borderRadius: "50%", flexShrink: 0,
+            background: avBg(selected?.id), color: avCol(selected?.id),
+            display: "flex", alignItems: "center", justifyContent: "center",
+            fontWeight: 800, fontSize: 10, fontFamily: "Nunito,sans-serif",
+          }}>
+            {iniContact(selected)}
+          </div>
+        )}
+
+        {/* Bulle */}
+        <div style={{
+          maxWidth: "68%",
+          background: isMine ? T.teal : T.surface,
+          color: isMine ? "#fff" : T.text1,
+          borderRadius: isMine ? "18px 4px 18px 18px" : "4px 18px 18px 18px",
+          padding: msg.fichier_type ? "10px 12px" : "9px 14px",
+          border: isMine ? "none" : `1px solid ${T.border}`,
+          boxShadow: "0 1px 4px rgba(0,0,0,0.07)",
+        }}>
+
+          {/* IMAGE */}
+          {msg.fichier_type === "image" && msg.fichier_url && (
+            <img
+              src={msg.fichier_url}
+              alt={msg.fichier_nom || "image"}
+              onClick={() => setLightbox(msg.fichier_url)}
+              style={{
+                maxWidth: "100%", maxHeight: 260, borderRadius: 10,
+                display: "block", cursor: "zoom-in",
+                marginBottom: msg.corps ? 8 : 0,
+              }}
+            />
+          )}
+
+          {/* VIDÉO */}
+          {msg.fichier_type === "video" && msg.fichier_url && (
+            <video
+              controls
+              style={{
+                maxWidth: "100%", maxHeight: 260, borderRadius: 10,
+                display: "block", marginBottom: msg.corps ? 8 : 0,
+              }}
+            >
+              <source src={msg.fichier_url} />
+            </video>
+          )}
+
+          {/* FICHIER */}
+          {msg.fichier_type === "file" && msg.fichier_url && (
+            <a
+              href={msg.fichier_url}
+              download={msg.fichier_nom}
+              target="_blank"
+              rel="noreferrer"
+              style={{
+                display: "flex", alignItems: "center", gap: 10,
+                padding: "8px 12px", borderRadius: 10,
+                background: isMine ? "rgba(255,255,255,0.15)" : T.bg,
+                textDecoration: "none",
+                color: isMine ? "#fff" : T.text1,
+                marginBottom: msg.corps ? 8 : 0,
+              }}
+            >
+              <FileText size={22} style={{ flexShrink: 0 }} />
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 12, fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  {msg.fichier_nom}
+                </div>
+                <div style={{ fontSize: 10, opacity: 0.65 }}>
+                  {fmtTaille(msg.fichier_taille)}
+                </div>
+              </div>
+              <Download size={14} style={{ flexShrink: 0 }} />
+            </a>
+          )}
+
+          {/* TEXTE */}
+          {msg.corps && (
+            <div style={{ fontSize: 14, lineHeight: 1.55, wordBreak: "break-word" }}>
+              {msg.corps}
+            </div>
+          )}
+
+          {/* Heure */}
+          <div style={{ fontSize: 10, opacity: 0.6, marginTop: 5, textAlign: "right" }}>
+            {fmtHeure(time)}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // ── Rendu ──
   return (
-    <Shell role="edu" title="Messagerie">
+    <Shell role={role} title="Messagerie">
       <style>{`
-        .msg-layout { display:grid; grid-template-columns:280px 1fr; gap:0; background:${T.surface}; border-radius:16px; border:1px solid ${T.border}; overflow:hidden; height:calc(100vh - 140px); min-height:500px; }
-        .msg-list { border-right:1px solid ${T.border}; display:flex; flex-direction:column; overflow:hidden; }
-        .msg-thread { display:flex; flex-direction:column; overflow:hidden; }
-        .msg-back { display:none; }
-        @media(max-width:700px){
-          .msg-layout { grid-template-columns:1fr; height:auto; }
-          .msg-list-panel { display:block; }
-          .msg-thread-panel { display:none; }
-          .msg-list-panel.hide { display:none; }
-          .msg-thread-panel.show { display:flex !important; flex-direction:column; height:calc(100vh - 140px); }
-          .msg-back { display:flex !important; }
+        .msg-root {
+          display: grid;
+          grid-template-columns: 320px 1fr;
+          height: calc(100vh - 140px);
+          min-height: 540px;
+          background: ${T.surface};
+          border-radius: 16px;
+          border: 1px solid ${T.border};
+          overflow: hidden;
+        }
+        .msg-left  { border-right: 1px solid ${T.border}; display:flex; flex-direction:column; overflow:hidden; }
+        .msg-right { display:flex; flex-direction:column; overflow:hidden; }
+
+        @media (max-width: 740px) {
+          .msg-root { grid-template-columns: 1fr; }
+          .msg-left.mobile-hide  { display: none; }
+          .msg-right.mobile-hide { display: none; }
         }
       `}</style>
 
-      <div className="msg-layout">
+      <div className="msg-root">
 
-        {/* ── Liste ── */}
-        <div className={`msg-list msg-list-panel${showMobile ? " hide" : ""}`}>
-          {/* Header liste */}
-          <div style={{ padding:12, borderBottom:`1px solid ${T.border}` }}>
-            <div style={{ display:"flex", gap:8, marginBottom:10 }}>
-              <button onClick={() => setShowNew(true)} style={{
-                flex:1, display:"flex", alignItems:"center", justifyContent:"center", gap:6,
-                padding:"9px", background:T.teal, color:"#fff", border:"none",
-                borderRadius:10, fontFamily:"Nunito,sans-serif", fontWeight:700, fontSize:13, cursor:"pointer",
-              }}>
-                <Plus size={14}/> Nouveau
+        {/* ══ PANNEAU GAUCHE : conversations ══ */}
+        <div className={`msg-left${mobileConv ? " mobile-hide" : ""}`}>
+
+          {/* En-tête */}
+          <div style={{ padding: "12px 14px", borderBottom: `1px solid ${T.border}` }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+              <span style={{ fontFamily: "Nunito,sans-serif", fontWeight: 800, fontSize: 15, flex: 1 }}>
+                Messages
+                {totalUnread > 0 && (
+                  <span style={{ background: T.danger, color: "#fff", padding: "1px 7px", borderRadius: 20, fontSize: 11, fontWeight: 700, marginLeft: 6 }}>
+                    {totalUnread}
+                  </span>
+                )}
+              </span>
+              <button
+                onClick={() => setShowPicker(s => !s)}
+                style={{
+                  display: "flex", alignItems: "center", gap: 5,
+                  padding: "7px 12px",
+                  background: showPicker ? T.teal : T.tealLight,
+                  color: showPicker ? "#fff" : T.teal,
+                  border: "none", borderRadius: 9,
+                  fontFamily: "Nunito,sans-serif", fontWeight: 700, fontSize: 12, cursor: "pointer",
+                }}
+              >
+                <Plus size={13} /> Nouveau
               </button>
-              {nonLus > 0 && (
-                <div style={{ background:T.dangerLight, color:T.danger, padding:"9px 12px", borderRadius:10, fontSize:13, fontWeight:700, display:"flex", alignItems:"center" }}>
-                  {nonLus}
-                </div>
-              )}
             </div>
-            <div style={{ position:"relative" }}>
-              <Search size={13} style={{ position:"absolute", left:10, top:"50%", transform:"translateY(-50%)", color:T.text3 }}/>
-              <input value={search} onChange={e => setSearch(e.target.value)}
+
+            {/* Recherche */}
+            <div style={{ position: "relative" }}>
+              <Search size={13} style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", color: T.text3 }} />
+              <input
+                value={search} onChange={e => setSearch(e.target.value)}
                 placeholder="Rechercher…"
-                style={{ width:"100%", padding:"8px 10px 8px 30px", borderRadius:9, border:`1.5px solid ${T.border}`, fontSize:13, fontFamily:"Nunito Sans,sans-serif", boxSizing:"border-box" }}/>
+                style={{ width: "100%", padding: "8px 10px 8px 30px", borderRadius: 9, border: `1.5px solid ${T.border}`, fontSize: 13, fontFamily: "Nunito Sans,sans-serif", boxSizing: "border-box" }}
+              />
             </div>
           </div>
 
-          {/* Messages */}
-          <div style={{ overflowY:"auto", flex:1 }}>
-            {filtered.length === 0 && (
-              <div style={{ padding:24, textAlign:"center", color:T.text2, fontSize:13 }}>Aucun message</div>
-            )}
-            {filtered.map((msg, idx) => (
-              <div key={msg.id} onClick={() => handleSelect(msg)}
-                style={{
-                  padding:"12px 14px", borderBottom:`1px solid ${T.border}`,
-                  cursor:"pointer", transition:"background .12s",
-                  background: selected?.id === msg.id ? T.tealLight : "transparent",
-                  borderLeft:`3px solid ${!msg.lu ? T.teal : "transparent"}`,
-                }}>
-                <div style={{ display:"flex", gap:10, alignItems:"flex-start" }}>
-                  <div style={{ width:36, height:36, borderRadius:"50%", background:avBg(idx), color:avCol(idx), display:"flex", alignItems:"center", justifyContent:"center", fontWeight:800, fontSize:11, fontFamily:"Nunito,sans-serif", flexShrink:0 }}>
-                    {ini(msg.expediteur || "")}
-                  </div>
-                  <div style={{ flex:1, minWidth:0 }}>
-                    <div style={{ display:"flex", justifyContent:"space-between", marginBottom:2 }}>
-                      <span style={{ fontSize:13, fontWeight:!msg.lu ? 800 : 600, fontFamily:"Nunito,sans-serif", color:T.text1 }}>
-                        {msg.expediteur}
-                      </span>
-                      <span style={{ fontSize:10, color:T.text3, flexShrink:0, marginLeft:4 }}>{fmt(msg.created_at)}</span>
+          <div style={{ overflowY: "auto", flex: 1 }}>
+
+            {/* ── Picker "Nouveau" ── */}
+            {showPicker && (
+              <div style={{ borderBottom: `2px solid ${T.teal}30` }}>
+                <div style={{ padding: "8px 14px 4px", fontSize: 10, fontWeight: 700, color: T.teal, textTransform: "uppercase", letterSpacing: "0.08em" }}>
+                  Choisir un contact
+                </div>
+                {[...contacts].sort((a, b) => nomContact(a).localeCompare(nomContact(b))).map(c => (
+                  <div
+                    key={c.id} onClick={() => selectContact(c)}
+                    style={{
+                      display: "flex", alignItems: "center", gap: 10,
+                      padding: "10px 14px", cursor: "pointer",
+                      background: selected?.id === c.id ? T.tealLight : "transparent",
+                      borderBottom: `1px solid ${T.border}`,
+                      transition: "background .1s",
+                    }}
+                  >
+                    <div style={{ width: 38, height: 38, borderRadius: "50%", background: avBg(c.id), color: avCol(c.id), display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: 12, fontFamily: "Nunito,sans-serif", flexShrink: 0 }}>
+                      {iniContact(c)}
                     </div>
-                    <div style={{ fontSize:12, fontWeight:!msg.lu ? 700 : 400, color:!msg.lu ? T.text1 : T.text2, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
-                      {msg.sujet}
+                    <div>
+                      <div style={{ fontSize: 13, fontWeight: 700 }}>{nomContact(c)}</div>
+                      <div style={{ fontSize: 11, color: T.text2 }}>{ROLE_LABEL[c.role] || c.role}</div>
+                    </div>
+                  </div>
+                ))}
+                {contacts.length === 0 && (
+                  <div style={{ padding: 20, textAlign: "center", color: T.text3, fontSize: 13 }}>Aucun contact disponible</div>
+                )}
+              </div>
+            )}
+
+            {/* ── Liste conversations ── */}
+            {filteredConvs.length === 0 && !showPicker && (
+              <div style={{ padding: 32, textAlign: "center", color: T.text2, fontSize: 13 }}>
+                Aucune conversation — cliquez sur <strong>Nouveau</strong>
+              </div>
+            )}
+
+            {filteredConvs.map(conv => {
+              const contact  = conv.contact;
+              const dm       = conv.dernier_message;
+              const unread   = conv.non_lus || 0;
+              const isSel    = selected?.id === contact?.id;
+              const preview  = dm?.fichier_type
+                ? (dm.fichier_type === "image" ? "[Image]" : dm.fichier_type === "video" ? "[Vidéo]" : `[Fichier] ${dm.fichier_nom || ""}`)
+                : (dm?.corps || "");
+
+              return (
+                <div
+                  key={contact?.id}
+                  onClick={() => selectContact(contact)}
+                  style={{
+                    padding: "12px 14px", cursor: "pointer",
+                    borderBottom: `1px solid ${T.border}`,
+                    borderLeft: `3px solid ${unread > 0 ? T.teal : "transparent"}`,
+                    background: isSel ? T.tealLight : "transparent",
+                    transition: "background .12s",
+                  }}
+                >
+                  <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+                    {/* Avatar + badge */}
+                    <div style={{ position: "relative", flexShrink: 0 }}>
+                      <div style={{ width: 44, height: 44, borderRadius: "50%", background: avBg(contact?.id), color: avCol(contact?.id), display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: 13, fontFamily: "Nunito,sans-serif" }}>
+                        {iniContact(contact)}
+                      </div>
+                      {unread > 0 && (
+                        <div style={{ position: "absolute", top: -2, right: -2, minWidth: 18, height: 18, borderRadius: 9, background: T.danger, color: "#fff", fontSize: 10, fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center", padding: "0 4px", border: `2px solid ${T.surface}` }}>
+                          {unread}
+                        </div>
+                      )}
+                    </div>
+                    {/* Infos */}
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 3 }}>
+                        <span style={{ fontSize: 13, fontWeight: unread > 0 ? 800 : 600, fontFamily: "Nunito,sans-serif" }}>
+                          {nomContact(contact)}
+                        </span>
+                        <span style={{ fontSize: 10, color: T.text3, flexShrink: 0, marginLeft: 6 }}>
+                          {fmtDate(dm?.envoye_le || dm?.created_at)}
+                        </span>
+                      </div>
+                      <div style={{ fontSize: 12, color: unread > 0 ? T.text1 : T.text2, fontWeight: unread > 0 ? 700 : 400, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        {preview || <span style={{ color: T.text3, fontStyle: "italic" }}>Pas encore de message</span>}
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
 
-        {/* ── Thread ── */}
-        <div className={`msg-thread msg-thread-panel${showMobile ? " show" : ""}`}>
+        {/* ══ PANNEAU DROIT : conversation ══ */}
+        <div className={`msg-right${!mobileConv ? " mobile-hide" : ""}`}>
+
           {!selected ? (
-            <div style={{ flex:1, display:"flex", alignItems:"center", justifyContent:"center", color:T.text2, flexDirection:"column", gap:12 }}>
-              <Send size={32} color={T.text3}/>
-              <span style={{ fontSize:14 }}>Sélectionnez un message</span>
+            <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 16, color: T.text2 }}>
+              <MessageSquare size={56} color={T.text3}/>
+              <div style={{ fontFamily: "Nunito,sans-serif", fontWeight: 800, fontSize: 16 }}>
+                Sélectionnez une conversation
+              </div>
+              <div style={{ fontSize: 13, color: T.text3 }}>
+                ou cliquez sur <strong>Nouveau</strong> pour démarrer
+              </div>
             </div>
           ) : (
             <>
-              {/* Header thread */}
-              <div style={{ padding:"14px 18px", borderBottom:`1px solid ${T.border}`, display:"flex", gap:12, alignItems:"center" }}>
-                <button className="msg-back" onClick={() => setShowMobile(false)}
-                  style={{ background:T.bg, border:`1px solid ${T.border}`, borderRadius:8, padding:"6px 8px", cursor:"pointer", display:"none", alignItems:"center" }}>
+              {/* En-tête conversation */}
+              <div style={{ padding: "12px 16px", borderBottom: `1px solid ${T.border}`, display: "flex", gap: 12, alignItems: "center" }}>
+                <button
+                  onClick={() => setMobileConv(false)}
+                  style={{ background: T.bg, border: `1px solid ${T.border}`, borderRadius: 8, padding: "5px 9px", cursor: "pointer", fontSize: 18, color: T.text2, display: "flex", alignItems: "center" }}
+                >
                   ‹
                 </button>
-                <div style={{ width:40, height:40, borderRadius:"50%", background:avBg(0), color:avCol(0), display:"flex", alignItems:"center", justifyContent:"center", fontWeight:800, fontSize:13, fontFamily:"Nunito,sans-serif", flexShrink:0 }}>
-                  {ini(selected.expediteur || "")}
+                <div style={{ width: 42, height: 42, borderRadius: "50%", background: avBg(selected.id), color: avCol(selected.id), display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: 13, fontFamily: "Nunito,sans-serif", flexShrink: 0 }}>
+                  {iniContact(selected)}
                 </div>
-                <div style={{ flex:1 }}>
-                  <div style={{ fontSize:14, fontWeight:800, fontFamily:"Nunito,sans-serif" }}>{selected.expediteur}</div>
-                  <div style={{ fontSize:12, color:T.text2 }}>{selected.sujet}</div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 14, fontWeight: 800, fontFamily: "Nunito,sans-serif" }}>{nomContact(selected)}</div>
+                  <div style={{ fontSize: 11, color: T.text2 }}>{ROLE_LABEL[selected.role] || selected.role}</div>
                 </div>
-                <span style={{ fontSize:11, color:T.text3 }}>{fmt(selected.created_at)}</span>
               </div>
 
-              {/* Corps message */}
-              <div style={{ flex:1, overflowY:"auto", padding:18, display:"flex", flexDirection:"column", gap:14 }}>
-                <div style={{ background:T.bg, borderRadius:"4px 14px 14px 14px", padding:"12px 16px", maxWidth:"80%", alignSelf:"flex-start" }}>
-                  <div style={{ fontSize:14, color:T.text1, lineHeight:1.6 }}>{selected.corps}</div>
-                  <div style={{ fontSize:10, color:T.text3, marginTop:8, display:"flex", alignItems:"center", gap:4 }}>
-                    {fmt(selected.created_at)}
+              {/* Messages */}
+              <div style={{ flex: 1, overflowY: "auto", padding: "16px 16px 8px", display: "flex", flexDirection: "column" }}>
+                {loadingConv && (
+                  <div style={{ textAlign: "center", padding: 24, color: T.text3, fontSize: 13 }}>Chargement…</div>
+                )}
+                {!loadingConv && messages.length === 0 && (
+                  <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 10, color: T.text3 }}>
+                    <MessageSquare size={40} color={T.text3}/>
+                    <div style={{ fontSize: 13 }}>Démarrez la conversation avec {nomContact(selected)}</div>
                   </div>
-                </div>
+                )}
+                {messages.map(renderMessage)}
+                <div ref={bottomRef} />
               </div>
 
-              {/* Zone réponse */}
-              <div style={{ padding:"12px 16px", borderTop:`1px solid ${T.border}`, display:"flex", gap:10, alignItems:"flex-end" }}>
-                <textarea
-                  value={reply} onChange={e => setReply(e.target.value)}
-                  placeholder="Écrire une réponse…" rows={2}
-                  onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleReply(); } }}
-                  style={{ flex:1, padding:"10px 12px", borderRadius:10, border:`1.5px solid ${T.border}`, fontSize:14, fontFamily:"Nunito Sans,sans-serif", resize:"none", boxSizing:"border-box" }}
+              {/* Aperçu fichier sélectionné */}
+              {file && (
+                <div style={{ padding: "8px 14px", borderTop: `1px solid ${T.border}`, background: T.bg, display: "flex", alignItems: "center", gap: 10 }}>
+                  {file.type.startsWith("image/") && filePreview && (
+                    <img src={filePreview} alt="" style={{ height: 54, width: 54, objectFit: "cover", borderRadius: 8 }} />
+                  )}
+                  {file.type.startsWith("video/") && filePreview && (
+                    <video src={filePreview} style={{ height: 54, borderRadius: 8 }} muted />
+                  )}
+                  {!file.type.startsWith("image/") && !file.type.startsWith("video/") && (
+                    <div style={{ width: 54, height: 54, borderRadius: 8, background: T.tealLight, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                      <FileText size={26} color={T.teal} />
+                    </div>
+                  )}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 13, fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{file.name}</div>
+                    <div style={{ fontSize: 11, color: T.text2 }}>{fmtTaille(file.size)}</div>
+                  </div>
+                  <button onClick={clearFile} style={{ background: T.dangerLight, border: "none", borderRadius: 7, padding: 5, cursor: "pointer", display: "flex" }}>
+                    <X size={16} color={T.danger} />
+                  </button>
+                </div>
+              )}
+
+              {/* Zone de saisie */}
+              <div style={{ padding: "10px 14px", borderTop: `1px solid ${T.border}`, display: "flex", gap: 8, alignItems: "flex-end" }}>
+                {/* Input fichier caché */}
+                <input
+                  ref={fileRef}
+                  type="file"
+                  accept="image/*,video/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.zip,.rar,.txt,.csv"
+                  onChange={handleFileChange}
+                  style={{ display: "none" }}
                 />
-                <button onClick={handleReply} disabled={!reply.trim() || sending}
-                  style={{ padding:"10px 16px", background:T.teal, color:"#fff", border:"none", borderRadius:10, fontFamily:"Nunito,sans-serif", fontWeight:700, fontSize:13, cursor:"pointer", display:"flex", alignItems:"center", gap:6, flexShrink:0, opacity:!reply.trim()?0.5:1 }}>
-                  <Send size={14}/> Envoyer
+                {/* Bouton pièce jointe */}
+                <button
+                  onClick={() => fileRef.current?.click()}
+                  title="Joindre un fichier"
+                  style={{
+                    padding: "10px", flexShrink: 0,
+                    background: T.bg, border: `1.5px solid ${T.border}`,
+                    borderRadius: 10, cursor: "pointer",
+                    display: "flex", alignItems: "center", color: T.text2,
+                  }}
+                >
+                  <Paperclip size={18} />
+                </button>
+
+                {/* Textarea */}
+                <textarea
+                  ref={textareaRef}
+                  value={text}
+                  onChange={e => setText(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  placeholder={file ? "Ajouter un commentaire…" : "Écrire un message…"}
+                  rows={1}
+                  style={{
+                    flex: 1, padding: "10px 12px", borderRadius: 10,
+                    border: `1.5px solid ${T.border}`,
+                    fontSize: 14, fontFamily: "Nunito Sans,sans-serif",
+                    resize: "none", boxSizing: "border-box",
+                    maxHeight: 110, overflowY: "auto",
+                  }}
+                />
+
+                {/* Bouton envoyer */}
+                <button
+                  onClick={handleSend}
+                  disabled={(!text.trim() && !file) || sending}
+                  style={{
+                    padding: "10px 16px", flexShrink: 0,
+                    background: T.teal, color: "#fff",
+                    border: "none", borderRadius: 10, cursor: "pointer",
+                    display: "flex", alignItems: "center", gap: 6,
+                    fontFamily: "Nunito,sans-serif", fontWeight: 700, fontSize: 13,
+                    opacity: (!text.trim() && !file) || sending ? 0.5 : 1,
+                    transition: "opacity .15s",
+                  }}
+                >
+                  <Send size={15} />
                 </button>
               </div>
             </>
@@ -253,49 +597,25 @@ export default function Messagerie() {
         </div>
       </div>
 
-      {/* ── Modal Nouveau message ── */}
-      {showNew && (
-        <>
-          <div onClick={() => setShowNew(false)} style={{ position:"fixed", inset:0, zIndex:40, background:"rgba(0,0,0,0.45)", backdropFilter:"blur(4px)" }}/>
-          <div style={{ position:"fixed", top:"50%", left:"50%", transform:"translate(-50%,-50%)", zIndex:50, width:"100%", maxWidth:480, background:T.surface, borderRadius:20, padding:28, margin:16, boxSizing:"border-box", boxShadow:"0 24px 80px rgba(0,0,0,0.2)" }}>
-            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:20 }}>
-              <div style={{ fontSize:17, fontWeight:800, fontFamily:"Nunito,sans-serif" }}>Nouveau message</div>
-              <button onClick={() => setShowNew(false)} style={{ background:T.bg, border:"none", borderRadius:8, padding:6, cursor:"pointer", display:"flex" }}>
-                <X size={18} color={T.text2}/>
-              </button>
-            </div>
-            <form onSubmit={handleNewMessage}>
-              <div style={{ marginBottom:14 }}>
-                <label style={{ fontSize:11, fontWeight:700, color:T.text2, display:"block", marginBottom:5, textTransform:"uppercase", letterSpacing:"0.07em" }}>Destinataire *</label>
-                <select value={newDest} onChange={e => setNewDest(e.target.value)} required
-                  style={{ width:"100%", padding:"10px 12px", borderRadius:10, border:`1.5px solid ${T.border}`, fontSize:14, fontFamily:"Nunito,sans-serif", background:T.surface }}>
-                  <option value="">Sélectionner…</option>
-                  {users.map(u => <option key={u.id} value={u.id}>{u.prenom} {u.nom}</option>)}
-                </select>
-              </div>
-              <div style={{ marginBottom:14 }}>
-                <label style={{ fontSize:11, fontWeight:700, color:T.text2, display:"block", marginBottom:5, textTransform:"uppercase", letterSpacing:"0.07em" }}>Sujet *</label>
-                <input value={newSujet} onChange={e => setNewSujet(e.target.value)} required placeholder="Sujet du message"
-                  style={{ width:"100%", padding:"10px 12px", borderRadius:10, border:`1.5px solid ${T.border}`, fontSize:14, fontFamily:"Nunito Sans,sans-serif", boxSizing:"border-box" }}/>
-              </div>
-              <div style={{ marginBottom:20 }}>
-                <label style={{ fontSize:11, fontWeight:700, color:T.text2, display:"block", marginBottom:5, textTransform:"uppercase", letterSpacing:"0.07em" }}>Message *</label>
-                <textarea value={newCorps} onChange={e => setNewCorps(e.target.value)} required rows={4} placeholder="Votre message…"
-                  style={{ width:"100%", padding:"10px 12px", borderRadius:10, border:`1.5px solid ${T.border}`, fontSize:14, fontFamily:"Nunito Sans,sans-serif", resize:"none", boxSizing:"border-box" }}/>
-              </div>
-              <div style={{ display:"flex", gap:10, justifyContent:"flex-end" }}>
-                <button type="button" onClick={() => setShowNew(false)}
-                  style={{ padding:"10px 18px", background:T.bg, color:T.text2, border:`1.5px solid ${T.border}`, borderRadius:10, fontFamily:"Nunito,sans-serif", fontWeight:700, cursor:"pointer" }}>
-                  Annuler
-                </button>
-                <button type="submit" disabled={sending}
-                  style={{ display:"flex", alignItems:"center", gap:6, padding:"10px 22px", background:T.teal, color:"#fff", border:"none", borderRadius:10, fontFamily:"Nunito,sans-serif", fontWeight:800, cursor:"pointer", opacity:sending?0.75:1 }}>
-                  <Send size={14}/> Envoyer
-                </button>
-              </div>
-            </form>
-          </div>
-        </>
+      {/* ── Lightbox image plein écran ── */}
+      {lightbox && (
+        <div
+          onClick={() => setLightbox(null)}
+          style={{ position: "fixed", inset: 0, zIndex: 200, background: "rgba(0,0,0,0.88)", display: "flex", alignItems: "center", justifyContent: "center" }}
+        >
+          <img
+            src={lightbox}
+            alt=""
+            style={{ maxWidth: "92vw", maxHeight: "92vh", borderRadius: 12, objectFit: "contain" }}
+            onClick={e => e.stopPropagation()}
+          />
+          <button
+            onClick={() => setLightbox(null)}
+            style={{ position: "absolute", top: 18, right: 18, background: "rgba(255,255,255,0.18)", border: "none", borderRadius: "50%", width: 42, height: 42, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff" }}
+          >
+            <X size={20} />
+          </button>
+        </div>
       )}
     </Shell>
   );

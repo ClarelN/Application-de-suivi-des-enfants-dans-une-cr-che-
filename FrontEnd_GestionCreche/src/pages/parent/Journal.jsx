@@ -1,21 +1,18 @@
 import { useState, useEffect } from "react";
 import Shell from "../../components/layout/Shell";
-import { ChevronLeft, ChevronRight, BookOpen } from "lucide-react";
+import { ChevronLeft, ChevronRight, BookOpen, Frown, Meh, Smile, ThumbsUp, Star, Utensils, Moon, FileText } from "lucide-react";
 import { T } from "../../constants/theme";
 import api from "../../services/api";
 
-const DEMO = [
-  { id:1, date:"2025-04-22", repas:"Très bien mangé", sieste_debut:"13:30", sieste_fin:"15:00", humeur:4, note:"Journée agréable, Lucas a bien participé aux activités." },
-  { id:2, date:"2025-04-21", repas:"Bien mangé",      sieste_debut:"14:00", sieste_fin:"15:30", humeur:3, note:"Un peu fatigué en fin de journée."                        },
-  { id:3, date:"2025-04-20", repas:"Peu mangé",       sieste_debut:"13:00", sieste_fin:"14:30", humeur:2, note:"Pas dans son assiette, peut-être une poussée de dents ?"  },
-  { id:4, date:"2025-04-19", repas:"Très bien mangé", sieste_debut:"13:30", sieste_fin:"15:00", humeur:5, note:"Excellente journée, très actif et souriant !"              },
-  { id:5, date:"2025-04-18", repas:"Bien mangé",      sieste_debut:"14:00", sieste_fin:"15:00", humeur:4, note:"RAS."                                                     },
-  { id:6, date:"2025-04-17", repas:"Bien mangé",      sieste_debut:"13:30", sieste_fin:"14:45", humeur:3, note:"Journée calme."                                           },
-  { id:7, date:"2025-04-16", repas:"Peu mangé",       sieste_debut:"14:00", sieste_fin:"15:30", humeur:2, note:"Semble fatigué."                                          },
-];
+const REPAS_LABELS = {
+  tout:   "Tout mangé",
+  un_peu: "Un peu mangé",
+  rien:   "N'a pas mangé",
+};
+const getRepasLabel = (r) => REPAS_LABELS[r] || r || "—";
 
-const HUMEUR_ICONS  = ["","😢","😐","🙂","😄","🤩"];
-const HUMEUR_LABELS = ["","Triste","Neutre","Bien","Super","Excellent"];
+const HUMEUR_LABELS    = ["","Triste","Neutre","Bien","Super","Excellent"];
+const HUMEUR_ICONS_MAP = [null, Frown, Meh, Smile, ThumbsUp, Star];
 const HUMEUR_COLORS = ["",T.danger, T.text2, T.teal, T.teal, T.teal];
 const MOIS = ["","Janvier","Février","Mars","Avril","Mai","Juin","Juillet","Août","Septembre","Octobre","Novembre","Décembre"];
 
@@ -26,8 +23,8 @@ export default function Journal() {
 
   useEffect(() => {
     api.get("/parent/suivis")
-      .then(r => setSuivis(r.data?.data?.length ? r.data.data : DEMO))
-      .catch(() => setSuivis(DEMO));
+      .then(r => setSuivis(r.data?.data || []))
+      .catch(() => {});
   }, []);
 
   const total     = Math.ceil(suivis.length / PER_PAGE);
@@ -72,7 +69,7 @@ export default function Journal() {
                   </div>
                 </div>
                 <div style={{ display:"flex", alignItems:"center", gap:6, background:hBg, padding:"5px 12px", borderRadius:20 }}>
-                  <span style={{ fontSize:18 }}>{HUMEUR_ICONS[humeur]}</span>
+                  {(() => { const HI = HUMEUR_ICONS_MAP[humeur]; return HI ? <HI size={14} color={hColor}/> : null; })()}
                   <span style={{ fontSize:12, fontWeight:700, color:hColor }}>{HUMEUR_LABELS[humeur]}</span>
                 </div>
               </div>
@@ -81,12 +78,12 @@ export default function Journal() {
                 {/* Infos grille */}
                 <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(140px,1fr))", gap:10, marginBottom:s.note ? 14 : 0 }}>
                   {[
-                    ["🍽️", "Repas",  s.repas || "—"],
-                    ["😴", "Sieste", s.sieste_debut && s.sieste_fin ? `${s.sieste_debut} → ${s.sieste_fin}` : "Non renseigné"],
-                  ].map(([icon, label, val]) => (
+                    [Utensils, "Repas",  getRepasLabel(s.repas)],
+                    [Moon,     "Sieste", s.sieste_debut && s.sieste_fin ? `${s.sieste_debut} → ${s.sieste_fin}` : "Non renseigné"],
+                  ].map(([Icon, label, val]) => (
                     <div key={label} style={{ background:T.bg, borderRadius:10, padding:"10px 12px" }}>
-                      <div style={{ fontSize:11, color:T.text2, fontWeight:700, textTransform:"uppercase", letterSpacing:"0.06em", marginBottom:3 }}>
-                        {icon} {label}
+                      <div style={{ fontSize:11, color:T.text2, fontWeight:700, textTransform:"uppercase", letterSpacing:"0.06em", marginBottom:3, display:"flex", alignItems:"center", gap:4 }}>
+                        <Icon size={11} color={T.text3}/> {label}
                       </div>
                       <div style={{ fontSize:13, fontWeight:600, color:T.text1 }}>{val}</div>
                     </div>
@@ -96,8 +93,8 @@ export default function Journal() {
                 {/* Note éducateur */}
                 {s.note && (
                   <div style={{ background:`${T.coralLight}80`, borderRadius:10, padding:"10px 14px", borderLeft:`3px solid ${T.coral}`, marginTop:10 }}>
-                    <div style={{ fontSize:11, color:T.coral, fontWeight:700, textTransform:"uppercase", letterSpacing:"0.06em", marginBottom:4 }}>
-                      📝 Note de l'éducateur
+                    <div style={{ fontSize:11, color:T.coral, fontWeight:700, textTransform:"uppercase", letterSpacing:"0.06em", marginBottom:4, display:"flex", alignItems:"center", gap:4 }}>
+                      <FileText size={11}/> Note de l'éducateur
                     </div>
                     <div style={{ fontSize:13, color:T.text1, lineHeight:1.6 }}>{s.note}</div>
                   </div>

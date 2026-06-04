@@ -1,17 +1,17 @@
 import { useState, useEffect } from "react";
 import Shell from "../../components/layout/Shell";
-import { Download, Check, Filter, Search } from "lucide-react";
+import { Download, Check, Filter, Search, ChevronLeft, ChevronRight } from "lucide-react";
 import { T } from "../../constants/theme";
 import api from "../../services/api";
 import toast from "react-hot-toast";
 
 const DEMO = [
-  { id:1, enfant:{ prenom:"Lucas", nom:"Martin"  }, mois:4, annee:2025, montant_du:"245,00 €", statut:"impayé" },
-  { id:2, enfant:{ prenom:"Emma",  nom:"Dupont"  }, mois:4, annee:2025, montant_du:"245,00 €", statut:"payé"   },
-  { id:3, enfant:{ prenom:"Noah",  nom:"Bernard" }, mois:4, annee:2025, montant_du:"245,00 €", statut:"impayé" },
-  { id:4, enfant:{ prenom:"Léa",   nom:"Rousseau"}, mois:4, annee:2025, montant_du:"245,00 €", statut:"payé"   },
-  { id:5, enfant:{ prenom:"Tom",   nom:"Petit"   }, mois:3, annee:2025, montant_du:"245,00 €", statut:"impayé" },
-  { id:6, enfant:{ prenom:"Chloé", nom:"Leroy"   }, mois:3, annee:2025, montant_du:"245,00 €", statut:"payé"   },
+  { id:1, enfant:{ prenom:"Lucas", nom:"Martin"  }, mois:4, annee:2025, montant_du:"45000", statut:"impayé" },
+  { id:2, enfant:{ prenom:"Emma",  nom:"Dupont"  }, mois:4, annee:2025, montant_du:"45000", statut:"payé"   },
+  { id:3, enfant:{ prenom:"Noah",  nom:"Bernard" }, mois:4, annee:2025, montant_du:"45000", statut:"impayé" },
+  { id:4, enfant:{ prenom:"Léa",   nom:"Rousseau"}, mois:4, annee:2025, montant_du:"45000", statut:"payé"   },
+  { id:5, enfant:{ prenom:"Tom",   nom:"Petit"   }, mois:3, annee:2025, montant_du:"45000", statut:"impayé" },
+  { id:6, enfant:{ prenom:"Chloé", nom:"Leroy"   }, mois:3, annee:2025, montant_du:"45000", statut:"payé"   },
 ];
 
 const MOIS = ["","Janvier","Février","Mars","Avril","Mai","Juin","Juillet","Août","Septembre","Octobre","Novembre","Décembre"];
@@ -21,6 +21,8 @@ export default function Facturation() {
   const [search,    setSearch]    = useState("");
   const [statFilter,setStatFilter]= useState("tous");
   const [loading,   setLoading]   = useState(true);
+  const [page,      setPage]      = useState(1);
+  const PER_PAGE = 10;
 
   useEffect(() => {
     api.get("/factures")
@@ -30,7 +32,7 @@ export default function Facturation() {
   }, []);
 
   const encaisser = (id) => {
-    api.post(`/factures/${id}/paiement`, { mode:"especes", montant:"245.00" }).catch(() => {});
+    api.post(`/factures/${id}/paiement`, { mode:"especes", montant:"45000" }).catch(() => {});
     setFactures(prev => prev.map(f => f.id === id ? { ...f, statut:"payé" } : f));
     toast.success("Paiement enregistré !");
   };
@@ -43,8 +45,10 @@ export default function Facturation() {
   });
 
   const totalImpayes = factures.filter(f => f.statut === "impayé").length;
-  const totalPercu   = factures.filter(f => f.statut === "payé").length * 245;
-  const totalDu      = factures.filter(f => f.statut === "impayé").length * 245;
+  const totalPercu   = factures.filter(f => f.statut === "payé").length * 45000;
+  const totalDu      = factures.filter(f => f.statut === "impayé").length * 45000;
+  const totalPages   = Math.ceil(filtered.length / PER_PAGE);
+  const paginated    = filtered.slice((page - 1) * PER_PAGE, page * PER_PAGE);
 
   return (
     <Shell role="admin" title="Facturation">
@@ -56,9 +60,9 @@ export default function Facturation() {
       {/* Stats */}
       <div className="fact-stats">
         {[
-          ["Total à percevoir", `${totalDu},00 €`, T.danger, T.dangerLight],
-          ["Factures impayées", `${totalImpayes}`, T.amber,  T.amberLight ],
-          ["Reçu ce mois",      `${totalPercu},00 €`, T.teal, T.tealLight ],
+          ["Total à percevoir", `${totalDu.toLocaleString('fr-FR')} FCFA`, T.danger, T.dangerLight],
+          ["Factures impayées", `${totalImpayes}`,                         T.amber,  T.amberLight ],
+          ["Reçu ce mois",      `${totalPercu.toLocaleString('fr-FR')} FCFA`, T.teal, T.tealLight],
         ].map(([label, val, color, bg]) => (
           <div key={label} style={{ background:bg, borderRadius:14, padding:"16px" }}>
             <div style={{ fontSize:26, fontWeight:900, color, fontFamily:"Nunito,sans-serif" }}>{val}</div>
@@ -103,7 +107,7 @@ export default function Facturation() {
             <tbody>
               {loading ? (
                 <tr><td colSpan={5} style={{ textAlign:"center", padding:32, color:T.text2 }}>Chargement…</td></tr>
-              ) : filtered.map(f => (
+              ) : paginated.map(f => (
                 <tr key={f.id} style={{ borderBottom:`1px solid ${T.border}` }}>
                   <td style={{ padding:"11px 14px" }}>
                     <div style={{ display:"flex", alignItems:"center", gap:10 }}>
@@ -143,8 +147,21 @@ export default function Facturation() {
             </tbody>
           </table>
         </div>
-        <div style={{ padding:"12px 14px", background:T.bg, borderTop:`1px solid ${T.border}`, fontSize:12, color:T.text2 }}>
-          {filtered.length} facture{filtered.length > 1 ? "s" : ""}
+        <div style={{ padding:"12px 14px", background:T.bg, borderTop:`1px solid ${T.border}`, display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+          <span style={{ fontSize:12, color:T.text2 }}>{filtered.length} facture{filtered.length > 1 ? "s" : ""}</span>
+          {totalPages > 1 && (
+            <div style={{ display:"flex", gap:6, alignItems:"center" }}>
+              <button onClick={() => setPage(p => Math.max(1, p-1))} disabled={page===1}
+                style={{ padding:"5px 10px", borderRadius:8, border:`1px solid ${T.border}`, background:T.surface, cursor:page===1?"not-allowed":"pointer", opacity:page===1?0.4:1, display:"flex", alignItems:"center" }}>
+                <ChevronLeft size={14}/>
+              </button>
+              <span style={{ fontSize:12, color:T.text2 }}>Page {page}/{totalPages}</span>
+              <button onClick={() => setPage(p => Math.min(totalPages, p+1))} disabled={page===totalPages}
+                style={{ padding:"5px 10px", borderRadius:8, border:`1px solid ${T.border}`, background:T.surface, cursor:page===totalPages?"not-allowed":"pointer", opacity:page===totalPages?0.4:1, display:"flex", alignItems:"center" }}>
+                <ChevronRight size={14}/>
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </Shell>

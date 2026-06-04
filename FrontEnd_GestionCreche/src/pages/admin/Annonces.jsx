@@ -129,7 +129,9 @@ export default function Annonces() {
                   </span>
                   {expire && (
                     <span style={{ fontSize:11, color:expired?T.danger:T.text3 }}>
-                      {expired ? "⚠️ Expirée" : `exp. ${expire.toLocaleDateString("fr-FR")}`}
+                      {expired
+                      ? <span style={{display:"inline-flex",alignItems:"center",gap:3}}><AlertTriangle size={11}/> Expirée</span>
+                      : `exp. ${expire.toLocaleDateString("fr-FR")}`}
                     </span>
                   )}
                 </div>
@@ -158,9 +160,8 @@ export default function Annonces() {
 
       {/* Modal */}
       {showForm && (
-        <>
-          <div onClick={() => setShowForm(false)} style={{ position:"fixed", inset:0, zIndex:40, background:"rgba(0,0,0,0.45)", backdropFilter:"blur(4px)" }}/>
-          <div style={{ position:"fixed", top:"50%", left:"50%", transform:"translate(-50%,-50%)", zIndex:50, width:"100%", maxWidth:500, background:T.surface, borderRadius:20, padding:28, margin:16, boxSizing:"border-box", boxShadow:"0 24px 80px rgba(0,0,0,0.2)" }}>
+        <div onClick={() => setShowForm(false)} style={{ position:"fixed", inset:0, zIndex:40, background:"rgba(0,0,0,0.45)", backdropFilter:"blur(4px)", display:"flex", alignItems:"center", justifyContent:"center" }}>
+          <div onClick={e => e.stopPropagation()} style={{ position:"relative", zIndex:50, width:"100%", maxWidth:500, background:T.surface, borderRadius:20, padding:28, margin:16, boxSizing:"border-box", boxShadow:"0 24px 80px rgba(0,0,0,0.2)" }}>
             <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:20 }}>
               <div style={{ fontSize:17, fontWeight:800, fontFamily:"Nunito,sans-serif" }}>
                 {editing ? "Modifier l'annonce" : "Nouvelle annonce"}
@@ -208,7 +209,7 @@ export default function Annonces() {
               </div>
             </form>
           </div>
-        </>
+        </div>
       )}
     </Shell>
   );
