@@ -11,6 +11,12 @@ use App\Http\Controllers\Api\AnnonceApiController;
 use App\Http\Controllers\Api\RepasController;
 use App\Http\Controllers\Api\ConsommationRepasController;
 use App\Http\Controllers\Api\StockLogistiqueController;
+use App\Http\Controllers\Api\UtilisateurApiController;
+use App\Http\Controllers\Api\SuiviJournalierController;
+use App\Http\Controllers\Api\IncidentController;
+use App\Http\Controllers\Api\TarifController;
+use App\Http\Controllers\Api\FactureController;
+use App\Http\Controllers\Api\ParentController;
 use Illuminate\Support\Facades\Route;
 
 // ─── Public ──────────────────────────────────────────────────────────────────
@@ -48,6 +54,10 @@ Route::middleware('auth:sanctum')->group(function () {
         ->parameters(['activites' => 'activity']);
 
     // ── Communication : Messages ──────────────────────────────────────────────
+    // Les routes nommées DOIVENT être avant apiResource pour éviter que
+    // "contacts" et "conversation" soient interprétés comme des {message}
+    Route::get('messages/contacts', [MessageApiController::class, 'contacts']);
+    Route::get('messages/conversation/{userId}', [MessageApiController::class, 'conversation']);
     Route::apiResource('messages', MessageApiController::class)->only([
         'index', 'store', 'show', 'destroy',
     ]);
@@ -70,4 +80,38 @@ Route::middleware('auth:sanctum')->group(function () {
     // ── Logistique : Stocks ───────────────────────────────────────────────────
     Route::apiResource('stocks', StockLogistiqueController::class)
         ->parameters(['stocks' => 'stockLogistique']);
+
+    // ── Utilisateurs ──────────────────────────────────────────────────────────
+    Route::get('utilisateurs', [UtilisateurApiController::class, 'index']);
+    Route::post('utilisateurs', [UtilisateurApiController::class, 'store']);
+    Route::put('utilisateurs/{utilisateur}', [UtilisateurApiController::class, 'update']);
+
+    // ── Suivi journalier ──────────────────────────────────────────────────────
+    Route::get('suivis', [SuiviJournalierController::class, 'index']);
+    Route::post('suivis', [SuiviJournalierController::class, 'store']);
+
+    // ── Incidents ─────────────────────────────────────────────────────────────
+    Route::get('incidents', [IncidentController::class, 'index']);
+    Route::post('incidents', [IncidentController::class, 'store']);
+    Route::patch('incidents/{incident}', [IncidentController::class, 'update']);
+
+    // ── Tarifs ────────────────────────────────────────────────────────────────
+    Route::get('tarifs', [TarifController::class, 'index']);
+    Route::post('tarifs', [TarifController::class, 'store']);
+    Route::put('tarifs/{tarif}', [TarifController::class, 'update']);
+
+    // ── Factures ─────────────────────────────────────────────────────────────
+    Route::get('factures', [FactureController::class, 'index']);
+    Route::post('factures/{facture}/paiement', [FactureController::class, 'paiement']);
+
+    // ── Messages : PATCH marquer lu ───────────────────────────────────────────
+    Route::patch('messages/{message}', [MessageApiController::class, 'update']);
+
+    // ── Espace parent ─────────────────────────────────────────────────────────
+    Route::prefix('parent')->group(function () {
+        Route::get('enfant',   [ParentController::class, 'enfant']);
+        Route::get('suivis',   [ParentController::class, 'suivis']);
+        Route::get('factures', [ParentController::class, 'factures']);
+        Route::post('absences', [ParentController::class, 'signalerAbsence']);
+    });
 });

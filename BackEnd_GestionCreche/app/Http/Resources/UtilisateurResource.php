@@ -15,6 +15,7 @@ class UtilisateurResource extends JsonResource
             'prenom' => $this->prenom,
             'email'  => $this->email,
             'role'   => $this->role,
+            'actif'  => (bool) $this->actif,
         ];
     }
 }
